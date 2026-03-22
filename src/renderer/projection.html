@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Open Screen — Projection</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+
+    html, body {
+      width:100vw; height:100vh;
+      overflow:hidden; background:#000;
+    }
+
+    /* Fondo dinámico */
+    #proj-bg {
+      position:fixed; inset:0;
+      background: radial-gradient(ellipse at 50% 35%, #1c0a0a, #000);
+      opacity:0;
+      transition: opacity .6s ease, background .4s ease;
+    }
+    #proj-bg.visible { opacity:1; }
+
+    /* Texto */
+    #stage {
+      position:fixed; inset:0;
+      display:flex; align-items:center; justify-content:center;
+      padding: 8vw;
+    }
+
+    #proj-text {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: clamp(28px, 6.5vw, 100px);
+      font-weight: 800;
+      color: #ffffff;
+      text-align: center;
+      line-height: 1.25;
+      white-space: pre-wrap;
+      word-break: break-word;
+      letter-spacing: -0.02em;
+      text-shadow: 0 2px 48px rgba(0,0,0,.8), 0 0 80px rgba(229,29,29,.1);
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity .45s ease, transform .45s ease;
+    }
+    #proj-text.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Marca de agua sutil */
+    .watermark {
+      position:fixed; bottom:18px; right:22px;
+      font-family:'Plus Jakarta Sans',sans-serif;
+      font-size:11px; font-weight:700;
+      letter-spacing:2.5px; text-transform:uppercase;
+      color:#ffffff12; pointer-events:none;
+      user-select:none;
+    }
+  </style>
+</head>
+<body>
+  <div id="proj-bg"></div>
+  <div id="stage">
+    <div id="proj-text"></div>
+  </div>
+  <div class="watermark">Open Screen</div>
+
+  <script>
+    const bg   = document.getElementById('proj-bg')
+    const text = document.getElementById('proj-text')
+
+    function showText(content, bgStyle) {
+      // Fade out
+      text.classList.remove('visible')
+      bg.classList.remove('visible')
+
+      setTimeout(() => {
+        text.textContent = content || ''
+        if (bgStyle) bg.style.background = bgStyle
+        if (content) {
+          text.classList.add('visible')
+          bg.classList.add('visible')
+        }
+      }, 220)
+    }
+
+    window.openScreen?.onReceive(payload => {
+      showText(payload.text, payload.bg)
+    })
+
+    window.openScreen?.onClear(() => {
+      showText('', null)
+    })
+  </script>
+</body>
+</html>

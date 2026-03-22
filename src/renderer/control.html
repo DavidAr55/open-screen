@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="es" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Open Screen — Control</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#fff1f1', 100: '#ffe0e0', 200: '#ffc7c7',
+              300: '#ffa0a0', 400: '#ff6b6b', 500: '#f83b3b',
+              600: '#e51d1d', 700: '#c11414', 800: '#9f1414', 900: '#841818',
+            },
+          },
+        }
+      }
+    }
+  </script>
+
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Plus Jakarta Sans',sans-serif; }
+
+    /* ── Tokens ── */
+    :root {
+      --bg:      #f1f5f9;
+      --surface: #ffffff;
+      --sidebar: #ffffff;
+      --text-1:  #0f172a;
+      --text-2:  #64748b;
+      --text-3:  #94a3b8;
+      --border:  #e2e8f0;
+      --red:     #e51d1d;
+      --red-soft:#fff1f1;
+      --red-border:#fca5a5;
+    }
+    html.dark {
+      --bg:      #0d0f18;
+      --surface: #161929;
+      --sidebar: #111420;
+      --text-1:  #f8fafc;
+      --text-2:  #94a3b8;
+      --text-3:  #475569;
+      --border:  #1e2535;
+      --red:     #f87171;
+      --red-soft:#2d1515;
+      --red-border:#7f1d1d;
+    }
+
+    body { background:var(--bg); color:var(--text-1); transition:background .3s,color .3s; }
+
+    ::-webkit-scrollbar{width:4px;height:4px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+
+    .surface   { background:var(--surface); border:1px solid var(--border); border-radius:14px; transition:background .3s,border-color .3s; }
+    .topbar    { background:var(--surface); border-bottom:1px solid var(--border); }
+    .sidebar-w { background:var(--sidebar); border-right:1px solid var(--border); }
+
+    /* Nav */
+    .nav-item {
+      display:flex; align-items:center; gap:9px;
+      padding:8px 12px; border-radius:10px;
+      font-size:13.5px; font-weight:500;
+      color:var(--text-2); cursor:pointer;
+      transition:all .15s; margin-bottom:2px; border:1px solid transparent;
+    }
+    .nav-item:hover  { background:var(--red-soft); color:var(--text-1); }
+    .nav-item.active { background:var(--red-soft); color:var(--red); font-weight:700; border-color:var(--red-border); }
+
+    /* Library item */
+    .lib-item {
+      padding:9px 11px; border-radius:10px;
+      border:1px solid transparent; cursor:pointer;
+      transition:all .15s; margin-bottom:3px;
+    }
+    .lib-item:hover  { background:var(--red-soft); border-color:var(--red-border); }
+    .lib-item.active { background:var(--red-soft); border-color:var(--red); }
+
+    /* Quick cards */
+    .quick-card {
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:12px; padding:10px;
+      cursor:pointer; text-align:left;
+      transition:all .15s;
+    }
+    .quick-card:hover { border-color:var(--red-border); box-shadow:0 4px 12px -4px rgb(0 0 0 / .1); transform:translateY(-1px); }
+
+    /* Inputs */
+    .os-input {
+      width:100%;
+      background:var(--bg);
+      border:1px solid var(--border);
+      color:var(--text-1);
+      border-radius:10px;
+      padding:8px 12px;
+      font-size:13px;
+      outline:none;
+      font-family:inherit;
+      transition:border-color .2s, box-shadow .2s, background .3s;
+    }
+    .os-input:focus { border-color:var(--red); box-shadow:0 0 0 3px rgb(229 29 29 / .1); }
+    .os-input::placeholder { color:var(--text-3); }
+
+    textarea.os-input { resize:none; line-height:1.6; }
+
+    select.os-input { cursor:pointer; }
+
+    /* Buttons */
+    .btn-red {
+      background:var(--red); color:#fff;
+      font-weight:700; border:none;
+      border-radius:11px; cursor:pointer;
+      padding:10px 20px; font-size:13.5px;
+      font-family:inherit;
+      display:inline-flex; align-items:center; gap:6px;
+      transition:all .15s;
+      box-shadow:0 4px 18px -4px rgb(229 29 29 / .45);
+    }
+    html.dark .btn-red { color:#fff; }
+    .btn-red:hover { filter:brightness(1.1); transform:translateY(-1px); box-shadow:0 6px 22px -4px rgb(229 29 29 / .55); }
+    .btn-red:active { transform:none; }
+
+    .btn-ghost {
+      background:var(--bg); color:var(--text-2);
+      border:1px solid var(--border);
+      font-weight:600; border-radius:10px;
+      cursor:pointer; padding:8px 14px;
+      font-size:13px; font-family:inherit;
+      display:inline-flex; align-items:center; gap:6px;
+      transition:all .15s;
+    }
+    .btn-ghost:hover { color:var(--text-1); border-color:var(--text-2); }
+
+    .btn-clear {
+      background:var(--red-soft); color:var(--red);
+      border:1px solid var(--red-border);
+      font-weight:600; border-radius:10px;
+      cursor:pointer; padding:7px 14px;
+      font-size:12.5px; font-family:inherit;
+      display:inline-flex; align-items:center; gap:5px;
+      transition:all .15s;
+    }
+    .btn-clear:hover { filter:brightness(.96); }
+
+    /* Label */
+    .label { font-size:11px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-3); }
+
+    /* Live badge */
+    .live-pill {
+      display:inline-flex; align-items:center; gap:5px;
+      padding:3px 9px; border-radius:99px;
+      font-size:11px; font-weight:600; font-family:'JetBrains Mono',monospace;
+      letter-spacing:.5px; text-transform:uppercase;
+      background:var(--red-soft); color:var(--text-3);
+      transition:all .3s;
+    }
+    .live-pill.on { background:#dcfce7; color:#15803d; }
+    html.dark .live-pill.on { background:#14532d55; color:#4ade80; }
+    .live-dot { width:6px;height:6px;border-radius:50%;background:currentColor; }
+    .live-pill.on .live-dot { animation:blink 1.4s ease-in-out infinite; }
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+    /* Slide canvas */
+    .slide-canvas {
+      width:100%; aspect-ratio:16/9;
+      border-radius:14px; overflow:hidden;
+      position:relative;
+      border:1px solid var(--border);
+      box-shadow:0 8px 32px -8px rgb(0 0 0 / .15);
+    }
+
+    /* Monitor thumb */
+    .monitor-thumb {
+      aspect-ratio:16/9; background:#000;
+      border-radius:9px; overflow:hidden;
+      position:relative; border:1px solid var(--border);
+    }
+
+    /* Theme toggle */
+    .toggle-wrap {
+      width:38px; height:20px;
+      background:var(--border);
+      border-radius:99px; position:relative;
+      cursor:pointer; transition:background .2s;
+      flex-shrink:0;
+    }
+    .toggle-wrap.on { background:var(--red); }
+    .toggle-wrap::after {
+      content:''; position:absolute;
+      top:2px; left:2px;
+      width:16px; height:16px;
+      background:#fff; border-radius:50%;
+      transition:transform .2s;
+      box-shadow:0 1px 4px #0003;
+    }
+    .toggle-wrap.on::after { transform:translateX(18px); }
+
+    /* Stat row */
+    .stat-row { display:flex; justify-content:space-between; align-items:center; padding:5px 0; }
+    .stat-row + .stat-row { border-top:1px solid var(--border); }
+
+    /* Fade in */
+    @keyframes fadeUp { from{opacity:0;transform:translateY(7px)} to{opacity:1;transform:translateY(0)} }
+    .fu  { animation:fadeUp .3s ease both; }
+    .fu2 { animation:fadeUp .3s .07s ease both; }
+    .fu3 { animation:fadeUp .3s .14s ease both; }
+  </style>
+</head>
+
+<body class="h-screen overflow-hidden flex flex-col">
+
+  <!-- ═══════════ TOPBAR ═══════════ -->
+  <header class="topbar h-[54px] flex items-center px-5 gap-4 flex-shrink-0 z-10 fu">
+
+    <!-- Logo -->
+    <div class="flex items-center gap-2.5 w-56 flex-shrink-0 select-none">
+      <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+        style="background:var(--red); box-shadow:0 4px 16px -4px rgb(229 29 29 / .5)">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+          <rect x="1.5" y="1.5" width="5" height="5" rx="1.5" fill="white" opacity=".9"/>
+          <rect x="8.5" y="1.5" width="5" height="5" rx="1.5" fill="white" opacity=".55"/>
+          <rect x="1.5" y="8.5" width="5" height="5" rx="1.5" fill="white" opacity=".55"/>
+          <rect x="8.5" y="8.5" width="5" height="5" rx="1.5" fill="white" opacity=".9"/>
+        </svg>
+      </div>
+      <span class="font-extrabold text-[15px] tracking-tight" style="color:var(--text-1)">Open Screen</span>
+    </div>
+
+    <h1 class="font-bold text-base" style="color:var(--text-1)">Panel de control</h1>
+
+    <div class="ml-auto flex items-center gap-3">
+
+      <!-- Monitor badge -->
+      <span id="monitor-badge" class="font-mono text-[11px] px-2.5 py-1 rounded-full"
+        style="background:var(--bg); border:1px solid var(--border); color:var(--text-3)">
+        Cargando…
+      </span>
+
+      <!-- Dark mode -->
+      <div class="flex items-center gap-1.5">
+        <!-- sol -->
+        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="color:var(--text-3)">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+        <div class="toggle-wrap" id="theme-toggle"></div>
+        <!-- luna -->
+        <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24" style="color:var(--text-3)">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </div>
+
+      <button class="btn-clear" id="btn-clear">
+        <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="3"/></svg>
+        Limpiar pantalla
+      </button>
+    </div>
+  </header>
+
+  <!-- ═══════════ LAYOUT ═══════════ -->
+  <div class="flex flex-1 overflow-hidden">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar-w w-56 flex-shrink-0 flex flex-col py-4 px-3 overflow-hidden fu">
+
+      <nav class="mb-4">
+        <div class="label px-2 mb-2">Menú</div>
+
+        <div class="nav-item active">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+            <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+          </svg>
+          Control
+        </div>
+        <div class="nav-item">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+          </svg>
+          Canciones
+        </div>
+        <div class="nav-item">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          </svg>
+          Escrituras
+        </div>
+        <div class="nav-item">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>
+          </svg>
+          Presentaciones
+        </div>
+      </nav>
+
+      <div class="h-px mb-4" style="background:var(--border)"></div>
+
+      <div class="label px-2 mb-2">Biblioteca</div>
+
+      <div class="relative mb-2.5">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="12" height="12"
+          fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" style="color:var(--text-3)">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <input type="text" id="search-input" placeholder="Buscar…" class="os-input" style="padding-left:30px">
+      </div>
+
+      <div class="flex-1 overflow-y-auto pr-0.5" id="lib-list"></div>
+
+      <div class="mt-auto pt-3" style="border-top:1px solid var(--border)">
+        <div class="nav-item">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          Ajustes
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="flex-1 flex flex-col overflow-hidden p-4 gap-3 fu2">
+
+      <!-- Slide preview -->
+      <div class="slide-canvas max-w-2xl w-full mx-auto">
+        <div class="absolute inset-0" id="slide-bg" style="background:radial-gradient(ellipse at 50% 35%,#1c0a0a,#000)"></div>
+        <div class="absolute top-2.5 left-3 font-mono text-[10px]" style="color:#ffffff33;letter-spacing:1px">PREVIEW</div>
+        <div class="absolute inset-0 flex items-center justify-center p-8">
+          <p id="preview-text" class="text-white font-bold text-center leading-snug whitespace-pre-wrap transition-all"
+            style="font-size:clamp(13px,3.2vw,30px);text-shadow:0 2px 24px #0009;color:#3a3a3a">
+            El texto aparecerá aquí
+          </p>
+        </div>
+      </div>
+
+      <!-- Editor -->
+      <div class="surface p-4">
+        <div class="label mb-2.5">Editor</div>
+        <textarea id="slide-text" rows="3" class="os-input"
+          placeholder="Escribe el texto a proyectar…&#10;Puedes usar múltiples líneas."></textarea>
+        <div class="flex items-center gap-2 mt-3">
+          <button class="btn-ghost text-[12.5px]" id="btn-add-lib">
+            <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+            Guardar
+          </button>
+          <div class="ml-auto flex items-center gap-2">
+            <select id="bg-select" class="os-input" style="width:auto;padding:8px 12px">
+              <option value="dark">Fondo oscuro</option>
+              <option value="red">Fondo rojo</option>
+              <option value="black">Negro puro</option>
+            </select>
+            <button class="btn-red" id="btn-project">
+              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Proyectar
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick grid -->
+      <div class="fu3">
+        <div class="label mb-2">Acceso rápido</div>
+        <div class="grid grid-cols-3 gap-2" id="quick-grid"></div>
+      </div>
+    </main>
+
+    <!-- RIGHT PANEL -->
+    <aside class="w-60 flex-shrink-0 flex flex-col p-3.5 gap-3 overflow-y-auto fu2"
+      style="border-left:1px solid var(--border)">
+
+      <!-- Live monitor -->
+      <div class="surface p-3">
+        <div class="flex items-center justify-between mb-2.5">
+          <span class="label">En vivo</span>
+          <div class="live-pill" id="live-pill">
+            <div class="live-dot"></div>
+            <span id="live-label">Sin señal</span>
+          </div>
+        </div>
+        <div class="monitor-thumb mb-2.5">
+          <div class="absolute inset-0" id="thumb-bg" style="background:radial-gradient(ellipse at center,#1c0a0a,#000)"></div>
+          <div class="absolute inset-0 flex items-center justify-center p-2">
+            <p id="thumb-text" class="text-white font-bold text-center leading-tight whitespace-pre-wrap"
+              style="font-size:7px;color:#2a2a2a">— vacío —</p>
+          </div>
+        </div>
+        <p class="text-[11px]" style="color:var(--text-3)">
+          Salida: <span id="output-info" class="font-semibold" style="color:var(--text-2)">Monitor secundario</span>
+        </p>
+      </div>
+
+      <!-- Sesión stats -->
+      <div class="surface p-3">
+        <div class="label mb-2">Sesión</div>
+        <div class="stat-row">
+          <span class="text-[13px]" style="color:var(--text-2)">Proyecciones</span>
+          <span class="text-[13px] font-bold" id="stat-proj" style="color:var(--text-1)">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="text-[13px]" style="color:var(--text-2)">En biblioteca</span>
+          <span class="text-[13px] font-bold" id="stat-lib" style="color:var(--text-1)">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="text-[13px]" style="color:var(--text-2)">Monitores</span>
+          <span class="text-[13px] font-bold" id="stat-mon" style="color:var(--text-1)">—</span>
+        </div>
+      </div>
+
+      <!-- Recientes -->
+      <div>
+        <div class="label mb-2">Recientes</div>
+        <div class="flex flex-col gap-1.5" id="recent-list"></div>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+  // ════════ ESTADO ════════
+  const state = {
+    library: [
+      { id:1, title:'Bienvenida',   text:'¡Bienvenidos!\nNos alegra tenerte aquí hoy.' },
+      { id:2, title:'Salmo 23:1',   text:'El SEÑOR es mi pastor,\nnada me faltará.' },
+      { id:3, title:'Juan 3:16',    text:'Porque de tal manera amó Dios al mundo,\nque dio a su Hijo unigénito.' },
+      { id:4, title:'Anuncio',      text:'Este domingo:\nEscuela de líderes — 5:00 PM' },
+      { id:5, title:'Cierre',       text:'Gracias por acompañarnos.\n¡Hasta la próxima!' },
+    ],
+    projections: 0, activeId: null, bgMode:'dark', dark:false,
+  }
+
+  const BG = {
+    dark:  'radial-gradient(ellipse at 50% 35%,#1c0a0a,#000)',
+    red:   'radial-gradient(ellipse at 50% 30%,#4a0a0a,#1a0000)',
+    black: '#000',
+  }
+
+  const $ = id => document.getElementById(id)
+
+  // ════════ DARK MODE ════════
+  $('theme-toggle').addEventListener('click', () => {
+    state.dark = !state.dark
+    document.documentElement.classList.toggle('dark', state.dark)
+    $('theme-toggle').classList.toggle('on', state.dark)
+  })
+
+  // ════════ PREVIEW ════════
+  $('slide-text').addEventListener('input', () => {
+    const v = $('slide-text').value.trim()
+    $('preview-text').textContent = v || 'El texto aparecerá aquí'
+    $('preview-text').style.color = v ? 'white' : '#3a3a3a'
+  })
+
+  // ════════ FONDO ════════
+  $('bg-select').addEventListener('change', e => {
+    state.bgMode = e.target.value
+    const bg = BG[state.bgMode]
+    $('slide-bg').style.background = bg
+    $('thumb-bg').style.background = bg
+  })
+
+  // ════════ PROYECTAR ════════
+  $('btn-project').addEventListener('click', () => {
+    const text = $('slide-text').value.trim()
+    if (text) project(text)
+  })
+
+  function project(text) {
+    window.openScreen?.project({ text, bg: BG[state.bgMode] })
+    state.projections++
+    $('stat-proj').textContent = state.projections
+    setLive(true, text)
+  }
+
+  // ════════ LIMPIAR ════════
+  $('btn-clear').addEventListener('click', () => {
+    window.openScreen?.clear()
+    setLive(false, '')
+  })
+
+  // ════════ LIVE STATE ════════
+  function setLive(on, text) {
+    const pill  = $('live-pill')
+    const thumb = $('thumb-text')
+    thumb.textContent = on ? text : '— vacío —'
+    thumb.style.color = on ? 'white' : '#2a2a2a'
+    pill.classList.toggle('on', on)
+    $('live-label').textContent = on ? 'En vivo' : 'Sin señal'
+  }
+
+  // ════════ BIBLIOTECA ════════
+  function renderLib(filter = '') {
+    const items = state.library.filter(i =>
+      i.title.toLowerCase().includes(filter.toLowerCase()) ||
+      i.text.toLowerCase().includes(filter.toLowerCase())
+    )
+    $('lib-list').innerHTML = items.map(i => `
+      <div class="lib-item ${state.activeId===i.id?'active':''}" data-id="${i.id}">
+        <div style="font-size:13px;font-weight:600;color:var(--text-1)">${i.title}</div>
+        <div style="font-size:11px;color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${i.text.replace('\n',' ')}</div>
+      </div>
+    `).join('')
+    $('lib-list').querySelectorAll('.lib-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const item = state.library.find(i => i.id===parseInt(el.dataset.id))
+        if (!item) return
+        state.activeId = item.id
+        $('slide-text').value = item.text
+        $('preview-text').textContent = item.text
+        $('preview-text').style.color = 'white'
+        renderLib(filter)
+      })
+    })
+    $('stat-lib').textContent = state.library.length
+  }
+
+  $('search-input').addEventListener('input', e => renderLib(e.target.value))
+
+  $('btn-add-lib').addEventListener('click', () => {
+    const text = $('slide-text').value.trim()
+    if (!text) return
+    state.library.unshift({ id:Date.now(), title:text.split('\n')[0].substring(0,26), text })
+    renderLib(); renderQuick(); renderRecent()
+  })
+
+  // ════════ QUICK GRID ════════
+  function renderQuick() {
+    $('quick-grid').innerHTML = state.library.slice(0,6).map(i => `
+      <button class="quick-card" data-id="${i.id}">
+        <div style="font-size:12px;font-weight:700;color:var(--text-1);margin-bottom:3px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${i.title}</div>
+        <div style="font-size:11px;color:var(--text-3);overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${i.text.split('\n')[0].substring(0,32)}</div>
+      </button>
+    `).join('')
+    $('quick-grid').querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const item = state.library.find(i => i.id===parseInt(btn.dataset.id))
+        if (item) project(item.text)
+      })
+    })
+  }
+
+  // ════════ RECIENTES ════════
+  function renderRecent() {
+    $('recent-list').innerHTML = state.library.slice(0,5).map(i => `
+      <button style="background:var(--red-soft);color:var(--red);border:1px solid var(--red-border);
+        font-size:12px;font-weight:600;border-radius:8px;padding:7px 10px;
+        text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+        width:100%;font-family:inherit;transition:filter .15s" data-id="${i.id}"
+        onmouseover="this.style.filter='brightness(.95)'" onmouseout="this.style.filter=''">
+        ${i.title}
+      </button>
+    `).join('')
+    $('recent-list').querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const item = state.library.find(i => i.id===parseInt(btn.dataset.id))
+        if (item) project(item.text)
+      })
+    })
+  }
+
+  // ════════ MONITORES ════════
+  async function loadMonitors() {
+    try {
+      const d = await window.openScreen?.getDisplays()
+      if (!d) return
+      $('monitor-badge').textContent = `${d.length} monitor${d.length>1?'es':''}`
+      $('stat-mon').textContent = d.length
+      const sec = d.find(x => !x.isPrimary)
+      $('output-info').textContent = sec ? `Monitor ${sec.id} (${sec.bounds.width}×${sec.bounds.height})` : 'Monitor principal'
+    } catch {}
+  }
+
+  // ════════ INIT ════════
+  renderLib(); renderQuick(); renderRecent(); loadMonitors()
+  </script>
+</body>
+</html>

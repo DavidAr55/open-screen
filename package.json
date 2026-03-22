@@ -1,0 +1,16 @@
+{
+  "name": "open-screen",
+  "version": "0.1.0",
+  "description": "Open source presentation & projection software",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev"
+  },
+  "keywords": ["presentation", "projection", "worship", "church"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.0.0"
+  }
+}
