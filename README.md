@@ -10,7 +10,9 @@
 
 <br/><br/>
 
-# 🟥 Open Screen
+<img src="resources/icon.svg" width="48" height="48" align="center" />
+
+# Open Screen
 
 **Software de proyección de presentaciones open source.**  
 Diseñado para iglesias, eventos y cualquier espacio que necesite proyectar texto, versículos o anuncios en una pantalla secundaria — sin depender de software privativo ni licencias costosas.
