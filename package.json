@@ -1,16 +1,42 @@
 {
   "name": "open-screen",
-  "version": "0.1.0",
+  "version": "0.2.0",
+  "type": "module",
   "description": "Open source presentation & projection software",
-  "main": "src/main.js",
+  "main": "out/main/index.js",
   "scripts": {
-    "start": "electron .",
-    "dev": "electron . --dev"
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "postinstall": "electron-rebuild -f -w better-sqlite3",
+    "bible:validate": "node tools/import-bible.js validate",
+    "bible:import": "node tools/import-bible.js import",
+    "bible:info": "node tools/import-bible.js info"
   },
-  "keywords": ["presentation", "projection", "worship", "church"],
+  "keywords": [
+    "presentation",
+    "projection",
+    "electron",
+    "open-source"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "electron": "^33.0.0"
+    "@vitejs/plugin-react": "^4.3.0",
+    "autoprefixer": "^10.4.20",
+    "electron": "^33.0.0",
+    "electron-rebuild": "^3.2.9",
+    "electron-vite": "^2.3.0",
+    "png-to-ico": "^3.0.1",
+    "postcss": "^8.4.47",
+    "sharp": "^0.34.5",
+    "tailwindcss": "^3.4.14",
+    "vite": "^5.4.8"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.5.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "pdfjs-dist": "^4.4.168"
   }
 }

@@ -90,3 +90,11 @@ coverage/
 *.pem
 .node_repl_history
 .yarn-integrity
+
+# ── Módulos bíblicos (.osb) ───────────────────────────────
+# Los .osb generados no se commitean (pueden tener copyright)
+bibles/
+*.osb
+# Las fuentes JSON de dominio público sí se pueden incluir
+# (descomenta la línea siguiente para rv1909 u otras PD)
+# !bibles-src/rv1909.json
