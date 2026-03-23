@@ -12,11 +12,11 @@ import { SlidePresentationRepository } from './SlidePresentationRepository.js'
  */
 export function createRepositories(db) {
   return {
-    settings: new SettingsRepository(db),
-    library:  new LibraryRepository(db),
-    media:    new MediaRepository(db),
-    bible:    new BibleRepository(),
-    songs:    new SongRepository(db),
-    slide:    new SlidePresentationRepository(db),
+    settings:      new SettingsRepository(db),
+    library:       new LibraryRepository(db),
+    media:         new MediaRepository(db),
+    bible:         new BibleRepository(),
+    songs:         new SongRepository(db),
+    presentations: new SlidePresentationRepository(db),
   }
 }

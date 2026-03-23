@@ -1,22 +1,23 @@
-import { useApp, AppProvider } from './context/AppContext.jsx'
-import { Topbar }        from './components/layout/Topbar.jsx'
-import { Sidebar }       from './components/layout/Sidebar.jsx'
-import { LivePanel }     from './components/live/LivePanel.jsx'
-import { ControlPage }   from './pages/ControlPage.jsx'
-import { ScripturePage } from './pages/ScripturePage.jsx'
-import { SongsPage }     from './pages/SongsPage.jsx'
+import { useApp, AppProvider }   from './context/AppContext.jsx'
+import { Topbar }                from './components/layout/Topbar.jsx'
+import { Sidebar }               from './components/layout/Sidebar.jsx'
+import { LivePanel }             from './components/live/LivePanel.jsx'
+import { ControlPage }           from './pages/ControlPage.jsx'
+import { ScripturePage }         from './pages/ScripturePage.jsx'
+import { SongsPage }             from './pages/SongsPage.jsx'
+import { PresentationsPage }     from './pages/PresentationsPage.jsx'
 
 function MainContent() {
   const { activePage } = useApp()
-
   const showLivePanel = activePage === 'Control'
 
   return (
     <div className="flex flex-1 overflow-hidden">
       <Sidebar />
-      {activePage === 'Escrituras' && <ScripturePage />}
-      {activePage === 'Canciones'  && <SongsPage />}
-      {activePage !== 'Escrituras' && activePage !== 'Canciones' && <ControlPage />}
+      {activePage === 'Escrituras'     && <ScripturePage />}
+      {activePage === 'Canciones'      && <SongsPage />}
+      {activePage === 'Presentaciones' && <PresentationsPage />}
+      {!['Escrituras','Canciones','Presentaciones'].includes(activePage) && <ControlPage />}
       {showLivePanel && <LivePanel />}
     </div>
   )

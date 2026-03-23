@@ -8,7 +8,7 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
-    "postinstall": "electron-rebuild -f -w better-sqlite3",
+    "postinstall": "npx @electron/rebuild -f -w better-sqlite3",
     "bible:validate": "node tools/import-bible.js validate",
     "bible:import": "node tools/import-bible.js import",
     "bible:info": "node tools/import-bible.js info"
