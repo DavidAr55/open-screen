@@ -142,39 +142,39 @@ open-screen/
 Open Screen separa el proceso principal (Node.js) del renderer (React) siguiendo el modelo de seguridad moderno de Electron — `contextIsolation: true`, sin `nodeIntegration` en el renderer.
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│  MAIN PROCESS (Node.js)                                      │
-│                                                              │
-│  ┌─────────────┐   ┌──────────────────────────────────────┐ │
-│  │ WindowManager│   │ IPC Handlers                         │ │
-│  │             │   │  library:findAll/create/update/delete │ │
-│  │ controlWin  │   │  settings:get/set/getAll/setMany      │ │
-│  │ projectWin  │   │  projection:send/clear/freeze         │ │
-│  └──────┬──────┘   │  displays:getAll                      │ │
-│         │          └────────────────┬─────────────────────┘ │
-│         │                           │                        │
-│         │          ┌────────────────▼──────────┐            │
-│         │          │  SQLite (better-sqlite3)   │            │
-│         │          │  ~/AppData/open-screen.db  │            │
-│         │          │                            │            │
-│         │          │  settings                  │            │
-│         │          │  library_items             │            │
-│         │          │  slides                    │            │
-│         │          │  media                     │            │
-│         │          │  presentations             │            │
-│         │          └───────────────────────────┘            │
-└─────────┼─────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────┐
+│  MAIN PROCESS (Node.js)                                       │
+│                                                               │
+│  ┌──────────────┐   ┌───────────────────────────────────────┐ │
+│  │ WindowManager│   │ IPC Handlers                          │ │
+│  │              │   │  library:findAll/create/update/delete │ │
+│  │ controlWin   │   │  settings:get/set/getAll/setMany      │ │
+│  │ projectWin   │   │  projection:send/clear/freeze         │ │
+│  └──────┬───────┘   │  displays:getAll                      │ │
+│         │           └───────────────┬───────────────────────┘ │
+│         │                           │                         │
+│         │          ┌────────────────▼───────────┐             │
+│         │          │  SQLite (better-sqlite3)   │             │
+│         │          │  ~/AppData/open-screen.db  │             │
+│         │          │                            │             │
+│         │          │  settings                  │             │
+│         │          │  library_items             │             │
+│         │          │  slides                    │             │
+│         │          │  media                     │             │
+│         │          │  presentations             │             │
+│         │          └────────────────────────────┘             │
+└─────────┼─────────────────────────────────────────────────────┘
           │  contextBridge (preload scripts)
           │
-  ┌───────▼──────────────┐     ┌──────────────────────┐
+  ┌───────▼──────────────┐     ┌───────────────────────┐
   │  CONTROL RENDERER    │     │  PROJECTION RENDERER  │
   │  (React 19)          │     │  (React 19)           │
   │                      │     │                       │
-  │  AppContext           │     │  Recibe payloads      │
+  │  AppContext          │     │  Recibe payloads      │
   │  ├─ theme/dark mode  │────►│  Anima texto          │
   │  ├─ library (SQLite) │     │  Gestiona fondos      │
   │  └─ live state       │     │                       │
-  └──────────────────────┘     └──────────────────────┘
+  └──────────────────────┘     └───────────────────────┘
 ```
 
 ### API expuesta al renderer (`window.api`)
@@ -296,10 +296,10 @@ node scripts/create-osb-module.mjs \
 - [x] Repositorios: Settings, Library, Media, Bible
 - [x] Formato de módulo bíblico OSB (`.osb`) propio y abierto
 - [x] Script generador de módulos desde JSON fuente
-- [ ] Módulo RV1909 (dominio público) como default
-- [ ] UI de búsqueda de versículos con selector de módulo
-- [ ] Guardar y cargar sets de presentación (`.json`)
-- [ ] Búsqueda avanzada en biblioteca
+- [x] Módulo RV1909 (dominio público) como default
+- [x] UI de búsqueda de versículos con selector de módulo
+- [x] Guardar y cargar sets de presentación (`.json`)
+- [x] Búsqueda avanzada en biblioteca
 
 ### v0.3 — Multimedia
 - [ ] Imágenes de fondo por slide
