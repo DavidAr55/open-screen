@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useApp } from '../context/AppContext.jsx'
 import { Button, Card, SectionLabel, Spinner } from '@shared/components/ui/index.jsx'
 import { cn } from '@shared/utils/cn.js'
-
+import { ConfirmModal } from '@shared/components/ConfirmModal.jsx'
 // ─── pdfjs setup ──────────────────────────────────────────────────────────────
 // Estrategia para Electron + Vite:
 // Vite procesa el worker como módulo y genera una URL válida en el bundle.
@@ -35,7 +35,7 @@ async function getPdfjs() {
 const UploadIcon   = () => <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
 const TrashIcon    = () => <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
 const ProjectIcon  = () => <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-const GridIcon     = () => <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+const SaveIcon     = () => <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
 const SlideIcon    = () => <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
 const BackIcon     = () => <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
 
@@ -60,55 +60,155 @@ async function loadPdfFromBase64(base64Data) {
   return pdfjs.getDocument({ data: bytes }).promise
 }
 
-// ─── Thumbnail card ───────────────────────────────────────────────────────────
-function PresentationCard({ pres, isActive, onClick, onDelete }) {
-  return (
-    <div
-      onClick={onClick}
+// ─── Context menu para presentaciones ────────────────────────────────────────
+function PresContextMenu({ x, y, pres, onProject, onToggleFav, onSaveToLibrary, onDelete, onClose }) {
+  const ref = useRef(null)
+
+  useEffect(() => {
+    const handle = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose() }
+    const t = setTimeout(() => document.addEventListener('mousedown', handle), 50)
+    return () => { clearTimeout(t); document.removeEventListener('mousedown', handle) }
+  }, [onClose])
+
+  const style = {
+    position: 'fixed',
+    top:  Math.min(y, window.innerHeight - 260),
+    left: Math.min(x, window.innerWidth  - 220),
+    zIndex: 9999,
+  }
+
+  const Sep = () => <div className="my-1 h-px bg-surface-muted dark:bg-dark-border mx-2" />
+
+  const MI = ({ icon, label, onClick, danger }) => (
+    <button onClick={() => { onClick(); onClose() }}
       className={cn(
-        'group relative rounded-xl border cursor-pointer transition-all overflow-hidden',
-        isActive
-          ? 'border-brand-400 dark:border-brand-600 shadow-brand'
-          : 'border-surface-muted dark:border-dark-border hover:border-brand-300 dark:hover:border-brand-700',
-      )}
-    >
-      {/* Thumbnail */}
-      <div className="aspect-video bg-slate-900 flex items-center justify-center relative overflow-hidden">
-        {pres.thumbnail ? (
-          <img src={pres.thumbnail} alt="" className="w-full h-full object-cover" />
-        ) : (
-          <div className="flex flex-col items-center gap-2 text-slate-600">
-            <SlideIcon />
-            <span className="text-[10px] font-mono">PDF</span>
-          </div>
-        )}
-        {/* Slide count badge */}
-        {pres.page_count > 0 && (
-          <span className="absolute bottom-1 right-1.5 font-mono text-[9px] font-bold bg-black/60 text-white/80 px-1.5 py-0.5 rounded">
-            {pres.page_count} slides
-          </span>
-        )}
-      </div>
-
-      {/* Info */}
-      <div className={cn(
-        'p-2.5',
-        isActive ? 'bg-brand-50 dark:bg-brand-950/30' : 'bg-white dark:bg-dark-surface',
+        'w-full flex items-center gap-2.5 px-3 py-1.5 text-[12.5px] font-medium transition-colors text-left',
+        danger
+          ? 'text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30'
+          : 'text-slate-700 dark:text-slate-300 hover:bg-surface-soft dark:hover:bg-dark-card',
       )}>
-        <p className={cn('text-[12px] font-semibold truncate',
-          isActive ? 'text-brand-700 dark:text-brand-300' : 'text-slate-800 dark:text-slate-200')}>
-          {pres.name}
-        </p>
+      {icon && <span className="opacity-60 flex-shrink-0">{icon}</span>}
+      {label}
+    </button>
+  )
+
+  return (
+    <div ref={ref} style={style}
+      className="w-52 py-1.5 rounded-xl bg-white dark:bg-dark-surface border border-surface-muted dark:border-dark-border shadow-card-md">
+      <div className="px-3 py-2 border-b border-surface-muted dark:border-dark-border mb-1">
+        <p className="text-[12px] font-bold text-slate-800 dark:text-slate-200 truncate">{pres.name}</p>
+        {pres.page_count > 0 && (
+          <p className="text-[10px] text-slate-400 mt-0.5">{pres.page_count} slides</p>
+        )}
+      </div>
+      <MI icon={<ProjectIcon />} label="Proyectar" onClick={onProject} />
+      <MI icon={<SaveIcon />}    label="Guardar en biblioteca" onClick={onSaveToLibrary} />
+      <Sep />
+      <MI
+        icon={
+          <svg width="12" height="12" fill={pres.is_favorite ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+        }
+        label={pres.is_favorite ? 'Quitar de favoritos' : 'Marcar favorito'}
+        onClick={onToggleFav}
+      />
+      <Sep />
+      <MI icon={<TrashIcon />} label="Eliminar" onClick={onDelete} danger />
+    </div>
+  )
+}
+
+// ─── Thumbnail card con context menu ─────────────────────────────────────────
+function PresentationCard({ pres, isActive, onClick, onDelete, onToggleFav, onSaveToLibrary, onProject }) {
+  const [ctx, setCtx] = useState(null)
+
+  const handleContextMenu = (e) => {
+    e.preventDefault()
+    setCtx({ x: e.clientX, y: e.clientY })
+  }
+
+  return (
+    <>
+      <div
+        onClick={onClick}
+        onContextMenu={handleContextMenu}
+        className={cn(
+          'group relative rounded-xl border cursor-pointer transition-all overflow-hidden',
+          isActive
+            ? 'border-brand-400 dark:border-brand-600 shadow-brand'
+            : 'border-surface-muted dark:border-dark-border hover:border-brand-300 dark:hover:border-brand-700',
+        )}
+      >
+        {/* Thumbnail */}
+        <div className="aspect-video bg-slate-900 flex items-center justify-center relative overflow-hidden">
+          {pres.thumbnail ? (
+            <img src={pres.thumbnail} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <div className="flex flex-col items-center gap-2 text-slate-600">
+              <SlideIcon />
+              <span className="text-[10px] font-mono">PDF</span>
+            </div>
+          )}
+          {pres.page_count > 0 && (
+            <span className="absolute bottom-1 right-1.5 font-mono text-[9px] font-bold bg-black/60 text-white/80 px-1.5 py-0.5 rounded">
+              {pres.page_count} slides
+            </span>
+          )}
+          {/* Favorito */}
+          {pres.is_favorite ? (
+            <span className="absolute top-1.5 left-1.5 text-amber-400">
+              <svg width="13" height="13" fill="currentColor" viewBox="0 0 24 24">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+            </span>
+          ) : null}
+        </div>
+
+        {/* Info */}
+        <div className={cn(
+          'p-2.5',
+          isActive ? 'bg-brand-50 dark:bg-brand-950/30' : 'bg-white dark:bg-dark-surface',
+        )}>
+          <p className={cn('text-[12px] font-semibold truncate',
+            isActive ? 'text-brand-700 dark:text-brand-300' : 'text-slate-800 dark:text-slate-200')}>
+            {pres.name}
+          </p>
+        </div>
+
+        {/* Botones hover */}
+        <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+          <button
+            onClick={e => { e.stopPropagation(); onToggleFav() }}
+            className={cn(
+              'p-1 rounded-lg bg-black/40 hover:bg-black/60 transition-all',
+              pres.is_favorite ? 'text-amber-400' : 'text-white/60 hover:text-amber-400',
+            )}
+          >
+            <svg width="11" height="11" fill={pres.is_favorite ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+          </button>
+          <button
+            onClick={e => { e.stopPropagation(); onDelete() }}
+            className="p-1 rounded-lg bg-black/40 text-white/70 hover:bg-red-500/80 hover:text-white transition-all"
+          >
+            <TrashIcon />
+          </button>
+        </div>
       </div>
 
-      {/* Delete button */}
-      <button
-        onClick={e => { e.stopPropagation(); onDelete() }}
-        className="absolute top-1.5 right-1.5 p-1 rounded-lg bg-black/40 text-white/70 hover:bg-red-500/80 hover:text-white opacity-0 group-hover:opacity-100 transition-all"
-      >
-        <TrashIcon />
-      </button>
-    </div>
+      {ctx && (
+        <PresContextMenu
+          x={ctx.x} y={ctx.y} pres={pres}
+          onProject={onProject}
+          onToggleFav={onToggleFav}
+          onSaveToLibrary={onSaveToLibrary}
+          onDelete={onDelete}
+          onClose={() => setCtx(null)}
+        />
+      )}
+    </>
   )
 }
 
@@ -228,17 +328,29 @@ function PresentationProjector({ pres, onBack }) {
     if (liveIdx >= 0) projectSlide(newIdx)
   }
 
-  // Teclado
+  // Teclado: ←→ navegan y proyectan, Home=primero, End=último
   useEffect(() => {
     const handler = (e) => {
+      if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return
       if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); goNext() }
       if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   { e.preventDefault(); goPrev() }
       if (e.key === 'Enter' || e.key === ' ')               { e.preventDefault(); projectSlide(activeIdx) }
-      if (e.key === 'Escape')                               { window.api?.presentations.clearSlide() }
+      if (e.key === 'Home') {
+        e.preventDefault()
+        setActiveIdx(0)
+        if (liveIdx >= 0) projectSlide(0)
+      }
+      if (e.key === 'End') {
+        e.preventDefault()
+        const last = slides.length - 1
+        setActiveIdx(last)
+        if (liveIdx >= 0) projectSlide(last)
+      }
+      if (e.key === 'Escape') { window.api?.presentations.clearSlide(); setLiveIdx(-1) }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [activeIdx, liveIdx, projectSlide, goNext, goPrev])
+  }, [activeIdx, liveIdx, projectSlide, goNext, goPrev, slides])
 
   if (error) {
     return (
@@ -347,11 +459,13 @@ function PresentationProjector({ pres, onBack }) {
 
 // ─── Página principal ─────────────────────────────────────────────────────────
 export function PresentationsPage() {
+  const { refreshLibrary } = useApp()
   const [presentations, setPresentations] = useState([])
   const [loading,       setLoading]       = useState(true)
   const [importing,     setImporting]     = useState(false)
   const [activePres,    setActivePres]    = useState(null)
-  const [view,          setView]          = useState('list') // 'list' | 'project'
+  const [view,          setView]          = useState('list')
+  const [confirmModal,  setConfirmModal]  = useState(null) // 'list' | 'project'
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -382,11 +496,32 @@ export function PresentationsPage() {
     }
   }
 
-  const handleDelete = async (id) => {
-    if (!confirm('¿Eliminar esta presentación?')) return
-    await window.api?.presentations.delete(id)
-    if (activePres?.id === id) setActivePres(null)
-    await load()
+  const handleDelete = (id) => {
+    setConfirmModal({
+      message: '¿Eliminar esta presentación? El archivo se eliminará de la biblioteca.',
+      onConfirm: async () => {
+        setConfirmModal(null)
+        await window.api?.presentations.delete(id)
+        if (activePres?.id === id) setActivePres(null)
+        await load()
+      },
+    })
+  }
+
+  const handleToggleFav = async (id) => {
+    const updated = await window.api?.presentations.toggleFavorite(id)
+    if (updated) {
+      setPresentations(prev => prev.map(p => p.id === id ? { ...p, is_favorite: updated.is_favorite } : p))
+    }
+  }
+
+  const handleSaveToLibrary = async (pres) => {
+    await window.api?.library.create({
+      title:   pres.name,
+      content: `${pres.name}${pres.page_count ? ` (${pres.page_count} slides)` : ''}`,
+      type:    'presentation',
+    })
+    refreshLibrary()
   }
 
   const handleProject = (pres) => {
@@ -459,11 +594,23 @@ export function PresentationsPage() {
                 isActive={activePres?.id === pres.id}
                 onClick={() => handleProject(pres)}
                 onDelete={() => handleDelete(pres.id)}
+                onToggleFav={() => handleToggleFav(pres.id)}
+                onSaveToLibrary={() => handleSaveToLibrary(pres)}
+                onProject={() => handleProject(pres)}
               />
             ))}
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        open={!!confirmModal}
+        title="Eliminar presentación"
+        message={confirmModal?.message}
+        confirmLabel="Eliminar"
+        onConfirm={confirmModal?.onConfirm}
+        onCancel={() => setConfirmModal(null)}
+      />
     </main>
   )
 }

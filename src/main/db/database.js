@@ -43,13 +43,24 @@ function runMigrations(db) {
     { version: 2, sql: SCHEMA.v2 },
     { version: 3, sql: SCHEMA.v3 },
     { version: 4, sql: SCHEMA.v4 },
+    { version: 5, sql: SCHEMA.v5 },
   ]
 
   for (const migration of migrations) {
     if (currentVersion < migration.version) {
+      if (!migration.sql || typeof migration.sql !== 'string') {
+        console.warn(`[DB] Migración v${migration.version} no tiene SQL definido — se omite`)
+        db.pragma(`user_version = ${migration.version}`)
+        continue
+      }
       console.log(`[DB] Corriendo migración v${migration.version}…`)
-      db.exec(migration.sql)
-      db.pragma(`user_version = ${migration.version}`)
+      try {
+        db.exec(migration.sql)
+        db.pragma(`user_version = ${migration.version}`)
+      } catch (e) {
+        console.error(`[DB] Error en migración v${migration.version}:`, e.message)
+        throw e
+      }
     }
   }
 }

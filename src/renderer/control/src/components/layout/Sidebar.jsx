@@ -12,15 +12,16 @@ const CopyIcon    = () => <svg width="12" height="12" fill="none" viewBox="0 0 2
 const DragIcon    = () => <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor"><circle cx="3" cy="2.5" r="1.2"/><circle cx="7" cy="2.5" r="1.2"/><circle cx="3" cy="7" r="1.2"/><circle cx="7" cy="7" r="1.2"/><circle cx="3" cy="11.5" r="1.2"/><circle cx="7" cy="11.5" r="1.2"/></svg>
 
 const TYPE_BADGES = {
-  text:         { label: 'Texto',     color: 'bg-slate-100 dark:bg-slate-800 text-slate-500' },
-  song:         { label: 'Canción',   color: 'bg-purple-50 dark:bg-purple-950/30 text-purple-500' },
-  verse:        { label: 'Versículo', color: 'bg-red-50 dark:bg-red-950/30 text-red-500' },
-  announcement: { label: 'Anuncio',   color: 'bg-amber-50 dark:bg-amber-950/30 text-amber-500' },
+  text:         { label: 'Texto',         color: 'bg-slate-100 dark:bg-slate-800 text-slate-500' },
+  song:         { label: 'Canción',       color: 'bg-purple-50 dark:bg-purple-950/30 text-purple-500' },
+  verse:        { label: 'Versículo',     color: 'bg-blue-50 dark:bg-blue-950/30 text-blue-500' },
+  announcement: { label: 'Anuncio',       color: 'bg-amber-50 dark:bg-amber-950/30 text-amber-500' },
+  presentation: { label: 'Presentación',  color: 'bg-green-50 dark:bg-green-950/30 text-green-600' },
 }
 
 const TYPE_LABELS = {
   all: 'Todos', text: 'Texto', song: 'Canciones',
-  verse: 'Versículos', announcement: 'Anuncios',
+  verse: 'Versículos', announcement: 'Anuncios', presentation: 'Presentaciones',
 }
 
 const NAV_ITEMS = [

@@ -200,4 +200,10 @@ export const SCHEMA = {
 
     CREATE INDEX IF NOT EXISTS idx_sp_name ON slide_presentations(name);
   `,
+  // ────────────────────────────────────────────────────────────────
+  //  v5 — Favoritos en presentaciones
+  // ────────────────────────────────────────────────────────────────
+  v5: `
+    ALTER TABLE slide_presentations ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0;
+  `
 }

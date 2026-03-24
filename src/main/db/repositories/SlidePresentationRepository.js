@@ -32,16 +32,27 @@ export class SlidePresentationRepository {
     return this.findById(result.lastInsertRowid)
   }
 
-  update(id, { name, page_count, thumbnail }) {
+  update(id, { name, page_count, thumbnail, is_favorite }) {
     const fields = []
     const params = []
     if (name        !== undefined) { fields.push('name = ?');        params.push(name) }
     if (page_count  !== undefined) { fields.push('page_count = ?');  params.push(page_count) }
     if (thumbnail   !== undefined) { fields.push('thumbnail = ?');   params.push(thumbnail) }
+    if (is_favorite !== undefined) { fields.push('is_favorite = ?'); params.push(is_favorite ? 1 : 0) }
     if (!fields.length) return this.findById(id)
     fields.push("updated_at = datetime('now')")
     params.push(id)
     this.#db.prepare(`UPDATE slide_presentations SET ${fields.join(', ')} WHERE id = ?`).run(...params)
+    return this.findById(id)
+  }
+
+  toggleFavorite(id) {
+    this.#db.prepare(`
+      UPDATE slide_presentations
+      SET is_favorite = CASE WHEN is_favorite=1 THEN 0 ELSE 1 END,
+          updated_at  = datetime('now')
+      WHERE id = ?
+    `).run(id)
     return this.findById(id)
   }
 

@@ -12,15 +12,20 @@ export function registerPresentationsIPC(presRepo, windowManager) {
 
   // ── CRUD ──────────────────────────────────────────────────────────────────
 
-  ipcMain.handle('presentations:findAll', () => presRepo.findAll())
-  ipcMain.handle('presentations:findById', (_e, id) => presRepo.findById(id))
-  ipcMain.handle('presentations:delete', (_e, id) => {
-    return presRepo.delete(id)
-  })
+  ipcMain.handle('presentations:findAll',   () => presRepo.findAll())
+  ipcMain.handle('presentations:findById',  (_e, id) => presRepo.findById(id))
+  ipcMain.handle('presentations:delete',    (_e, id) => presRepo.delete(id))
+  ipcMain.handle('presentations:update',    (_e, id, data) => presRepo.update(id, data))
+  ipcMain.handle('presentations:toggleFavorite', (_e, id) => presRepo.toggleFavorite(id))
 
-  // Actualizar metadatos (nombre, page_count, thumbnail) desde el renderer
-  // después de que pdfjs termine de procesar el archivo
-  ipcMain.handle('presentations:update', (_e, id, data) => presRepo.update(id, data))
+  // Guardar presentación como ítem de biblioteca
+  ipcMain.handle('presentations:saveToLibrary', (_e, id) => {
+    const pres = presRepo.findById(id)
+    if (!pres) return null
+    // Importar LibraryRepository directamente no es lo ideal —
+    // en su lugar pasamos los datos al renderer y él llama library:create
+    return { title: pres.name, type: 'presentation', content: pres.file_path }
+  })
 
   // ── Importar archivo via diálogo del SO ───────────────────────────────────
   ipcMain.handle('presentations:import', async (event) => {

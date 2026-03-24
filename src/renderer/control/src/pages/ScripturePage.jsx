@@ -102,10 +102,32 @@ function ContextMenu({ x, y, verse, onProject, onSave, onCopy, onClose }) {
   )
 }
 
+// ─── Resaltador de texto ──────────────────────────────────────────────────────
+function Highlight({ text, query }) {
+  if (!query || !query.trim()) return <>{text}</>
+
+  const escaped = query.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const parts   = text.split(new RegExp(`(${escaped})`, 'gi'))
+
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.toLowerCase() === query.trim().toLowerCase() ? (
+          <mark key={i} className="bg-amber-300/70 dark:bg-amber-500/40 text-inherit rounded px-0.5 -mx-0.5 font-bold">
+            {part}
+          </mark>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </>
+  )
+}
+
 // ─── Componente de versículo con todos los eventos ────────────────────────────
-function VerseItem({ verse, isSelected, onSelect, onProject, onSave }) {
+function VerseItem({ verse, isSelected, onSelect, onProject, onSave, searchQuery }) {
   const clickTimer  = useRef(null)
-  const [ctx, setCtx] = useState(null) // { x, y } posición del menú contextual
+  const [ctx, setCtx] = useState(null)
 
   const handleClick = (e) => {
     e.preventDefault()
@@ -153,7 +175,7 @@ function VerseItem({ verse, isSelected, onSelect, onProject, onSave }) {
           {verse.verse}
         </span>
         <span className="text-[12px] leading-relaxed text-slate-700 dark:text-slate-300">
-          {verse.text}
+          <Highlight text={verse.text} query={searchQuery} />
         </span>
       </div>
 
@@ -293,17 +315,55 @@ export function ScripturePage() {
     if (next) goToVerse(next)
   }, [verses, selectedVerse, goToVerse])
 
+  // ── Navegación en resultados de búsqueda ───────────────────────────────────
+  const goSearchPrev = useCallback(() => {
+    if (!selectedVerse || searchResults.length === 0) return
+    const idx = searchResults.findIndex(v => v.id === selectedVerse.id)
+    const prev = searchResults[Math.max(0, idx - 1)]
+    if (prev) goToVerse(prev)
+  }, [searchResults, selectedVerse, goToVerse])
+
+  const goSearchNext = useCallback(() => {
+    if (!selectedVerse || searchResults.length === 0) return
+    const idx = searchResults.findIndex(v => v.id === selectedVerse.id)
+    const next = searchResults[Math.min(searchResults.length - 1, idx + 1)]
+    if (next) goToVerse(next)
+  }, [searchResults, selectedVerse, goToVerse])
+
   // ── Atajos de teclado ──────────────────────────────────────────────────────
   useEffect(() => {
     const handler = (e) => {
-      if (!selectedVerse || mode !== 'navigate') return
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); goNext() }
-      if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   { e.preventDefault(); goPrev() }
-      if (e.key === 'Enter') { e.preventDefault(); projectVerse(selectedVerse) }
+      if (!selectedVerse) return
+      if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return
+
+      if (mode === 'navigate') {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); goNext() }
+        if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   { e.preventDefault(); goPrev() }
+        if (e.key === 'Enter') { e.preventDefault(); projectVerse(selectedVerse) }
+        if (e.key === 'Home' && verses.length > 0) {
+          e.preventDefault(); goToVerse(verses[0])
+        }
+        if (e.key === 'End' && verses.length > 0) {
+          e.preventDefault(); goToVerse(verses[verses.length - 1])
+        }
+      }
+
+      if (mode === 'search' && searchResults.length > 0) {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); goSearchNext() }
+        if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   { e.preventDefault(); goSearchPrev() }
+        if (e.key === 'Enter') { e.preventDefault(); projectVerse(selectedVerse) }
+        if (e.key === 'Home') {
+          e.preventDefault(); goToVerse(searchResults[0])
+        }
+        if (e.key === 'End') {
+          e.preventDefault(); goToVerse(searchResults[searchResults.length - 1])
+        }
+      }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [selectedVerse, mode, goNext, goPrev, projectVerse])
+  }, [selectedVerse, mode, goNext, goPrev, projectVerse, verses, goToVerse,
+      searchResults, goSearchNext, goSearchPrev])
 
   // ─────────────────────────────────────────────────────────────────────────────
   if (!loading && modules.length === 0) {
@@ -453,6 +513,7 @@ export function ScripturePage() {
                       onSelect={setSelectedVerse}
                       onProject={projectVerse}
                       onSave={saveVerse}
+                      searchQuery={query}
                     />
                   ))}
                 </>
@@ -483,16 +544,20 @@ export function ScripturePage() {
               </p>
             </Card>
 
-            {/* ── Barra de controles: Anterior · Proyectar · Siguiente · Guardar ── */}
+            {/* ── Barra de controles ── */}
             <div className="flex gap-2 flex-shrink-0 items-center">
 
               {/* Anterior */}
               <button
-                disabled={!selectedVerse || selectedVerse.verse <= 1}
-                onClick={goPrev}
+                disabled={mode === 'navigate'
+                  ? (!selectedVerse || selectedVerse.verse <= 1)
+                  : searchResults.findIndex(v => v.id === selectedVerse?.id) <= 0}
+                onClick={mode === 'navigate' ? goPrev : goSearchPrev}
                 className={cn(
                   'flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-semibold border transition-all flex-shrink-0',
-                  (!selectedVerse || selectedVerse.verse <= 1)
+                  (mode === 'navigate'
+                    ? (!selectedVerse || selectedVerse.verse <= 1)
+                    : searchResults.findIndex(v => v.id === selectedVerse?.id) <= 0)
                     ? 'border-surface-muted dark:border-dark-border text-slate-300 dark:text-slate-700 cursor-not-allowed'
                     : 'border-surface-muted dark:border-dark-border text-slate-600 dark:text-slate-300 hover:border-brand-300 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-950/20',
                 )}
@@ -503,7 +568,7 @@ export function ScripturePage() {
                 Anterior
               </button>
 
-              {/* Proyectar — botón central prominente */}
+              {/* Proyectar */}
               <button
                 onClick={() => projectVerse(selectedVerse)}
                 className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-bold text-white bg-brand-600 hover:bg-brand-700 transition-all shadow-brand hover:-translate-y-px active:translate-y-0"
@@ -514,11 +579,15 @@ export function ScripturePage() {
 
               {/* Siguiente */}
               <button
-                disabled={!selectedVerse || selectedVerse.verse >= verses.length}
-                onClick={goNext}
+                disabled={mode === 'navigate'
+                  ? (!selectedVerse || selectedVerse.verse >= verses.length)
+                  : searchResults.findIndex(v => v.id === selectedVerse?.id) >= searchResults.length - 1}
+                onClick={mode === 'navigate' ? goNext : goSearchNext}
                 className={cn(
                   'flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-semibold border transition-all flex-shrink-0',
-                  (!selectedVerse || selectedVerse.verse >= verses.length)
+                  (mode === 'navigate'
+                    ? (!selectedVerse || selectedVerse.verse >= verses.length)
+                    : searchResults.findIndex(v => v.id === selectedVerse?.id) >= searchResults.length - 1)
                     ? 'border-surface-muted dark:border-dark-border text-slate-300 dark:text-slate-700 cursor-not-allowed'
                     : 'border-surface-muted dark:border-dark-border text-slate-600 dark:text-slate-300 hover:border-brand-300 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-950/20',
                 )}
@@ -546,13 +615,14 @@ export function ScripturePage() {
               </button>
             </div>
 
-            {/* Hint teclado */}
-            {mode === 'navigate' && verses.length > 0 && (
-              <p className="text-[10px] text-slate-300 dark:text-slate-700 text-center flex-shrink-0">
-                {selectedVerse.bookName} {selectedVerse.chapter}:{selectedVerse.verse} / {verses.length}
-                &nbsp;·&nbsp; ← → y Enter también proyectan
-              </p>
-            )}
+            {/* Hint */}
+            <p className="text-[10px] text-slate-300 dark:text-slate-700 text-center flex-shrink-0">
+              {mode === 'navigate' && verses.length > 0 &&
+                `${selectedVerse.bookName} ${selectedVerse.chapter}:${selectedVerse.verse} / ${verses.length} · `}
+              {mode === 'search' && searchResults.length > 0 &&
+                `Resultado ${searchResults.findIndex(v => v.id === selectedVerse?.id) + 1} / ${searchResults.length} · `}
+              ← → y Enter también proyectan
+            </p>
           </>
         ) : (
           <div className="flex-1 flex items-center justify-center text-slate-400 text-sm">
