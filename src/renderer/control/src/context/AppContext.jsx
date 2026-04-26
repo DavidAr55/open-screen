@@ -49,16 +49,39 @@ export function AppProvider({ children }) {
   const [liveText,    setLiveText]    = useState('')
   const [isLive,      setIsLive]      = useState(false)
   const [liveBg,      setLiveBg]      = useState('dark')
+  // Fondo activo extendido — objeto {type, value, id?, name?}
+  // null = usar liveBg (preset legacy)
+  const [activeBg,    setActiveBgState] = useState(null)
   const [projCount,   setProjCount]   = useState(0)
 
-  const project = useCallback((text, bg = liveBg) => {
-    const payload = { text, bg }
+  const setActiveBg = useCallback((bg) => {
+    setActiveBgState(bg)
+    // Notificar inmediatamente a la ventana de proyección
+    if (bg) window.api?.backgrounds?.setActive(bg)
+  }, [])
+
+  // Obtener el bg que se debe enviar en cada proyección
+  // Si hay un activeBg personalizado, usarlo; si no, usar liveBg (preset)
+  const currentBgPayload = useCallback(() => {
+    if (activeBg) return activeBg
+    // Convertir preset string a objeto
+    const BG_VALUES = {
+      dark:  'radial-gradient(ellipse at 50% 35%, #1c0a0a, #000)',
+      red:   'radial-gradient(ellipse at 50% 30%, #4a0808, #1a0000)',
+      black: '#000000',
+    }
+    return { type: 'gradient', value: BG_VALUES[liveBg] ?? BG_VALUES.dark }
+  }, [activeBg, liveBg])
+
+  const project = useCallback((text, _legacyBg) => {
+    // _legacyBg se ignora si hay un activeBg seleccionado en el panel
+    const bgPayload = currentBgPayload()
+    const payload = { text, bg: bgPayload }
     window.api?.projection.send(payload)
     setLiveText(text)
     setIsLive(true)
-    setLiveBg(bg)
     setProjCount(c => c + 1)
-  }, [liveBg])
+  }, [currentBgPayload])
 
   const clearProjection = useCallback(() => {
     window.api?.projection.clear()
@@ -99,7 +122,7 @@ export function AppProvider({ children }) {
       // Biblioteca
       library, libLoading, refreshLibrary, createItem, deleteItem, deleteMany,
       // Proyección
-      liveText, isLive, liveBg, setLiveBg, projCount, project, clearProjection,
+      liveText, isLive, liveBg, setLiveBg, activeBg, setActiveBg, projCount, project, clearProjection,
       // Monitores
       displays,
     }}>

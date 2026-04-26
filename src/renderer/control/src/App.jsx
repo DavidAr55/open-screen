@@ -6,6 +6,7 @@ import { ControlPage }           from './pages/ControlPage.jsx'
 import { ScripturePage }         from './pages/ScripturePage.jsx'
 import { SongsPage }             from './pages/SongsPage.jsx'
 import { PresentationsPage }     from './pages/PresentationsPage.jsx'
+import { SettingsPage }          from './pages/SettingsPage.jsx'
 
 function MainContent() {
   const { activePage } = useApp()
@@ -17,7 +18,8 @@ function MainContent() {
       {activePage === 'Escrituras'     && <ScripturePage />}
       {activePage === 'Canciones'      && <SongsPage />}
       {activePage === 'Presentaciones' && <PresentationsPage />}
-      {!['Escrituras','Canciones','Presentaciones'].includes(activePage) && <ControlPage />}
+      {activePage === 'Ajustes'        && <SettingsPage />}
+      {!['Escrituras','Canciones','Presentaciones','Ajustes'].includes(activePage) && <ControlPage />}
       {showLivePanel && <LivePanel />}
     </div>
   )

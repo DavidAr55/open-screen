@@ -44,6 +44,7 @@ function runMigrations(db) {
     { version: 3, sql: SCHEMA.v3 },
     { version: 4, sql: SCHEMA.v4 },
     { version: 5, sql: SCHEMA.v5 },
+    { version: 6, sql: SCHEMA.v6 },
   ]
 
   for (const migration of migrations) {

@@ -9,11 +9,13 @@ contextBridge.exposeInMainWorld('api', {
   onClear:   (cb) => ipcRenderer.on('projection:clear',    ()            => cb()),
   onFreeze:  (cb) => ipcRenderer.on('projection:freeze',   (_e, data)    => cb(data)),
   onSlide:   (cb) => ipcRenderer.on('projection:slide',    (_e, payload) => cb(payload)),
+  onSetBg:   (cb) => ipcRenderer.on('projection:setBg',    (_e, payload) => cb(payload)),
 
   removeAllListeners: () => {
     ipcRenderer.removeAllListeners('projection:receive')
     ipcRenderer.removeAllListeners('projection:clear')
     ipcRenderer.removeAllListeners('projection:freeze')
     ipcRenderer.removeAllListeners('projection:slide')
+    ipcRenderer.removeAllListeners('projection:setBg')
   },
 })

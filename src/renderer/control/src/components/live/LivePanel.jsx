@@ -4,16 +4,22 @@ import { BG_STYLES } from '../editor/SlideEditor.jsx'
 import { cn } from '@shared/utils/cn.js'
 
 export function LivePanel() {
-  const { isLive, liveText, liveBg, projCount, library, displays, project } = useApp()
+  const { isLive, liveText, activeBg, projCount, library, displays, project } = useApp()
 
   const secondary = displays.find(d => !d.isPrimary)
   const outputLabel = secondary
     ? `Monitor ${secondary.id} — ${secondary.bounds.width}×${secondary.bounds.height}`
     : 'Monitor principal'
 
-  const thumbStyle = {
-    background: BG_STYLES[liveBg] ?? BG_STYLES.dark,
-  }
+  // Preview usa activeBg si existe, sino el preset dark
+  const thumbStyle = (() => {
+    if (!activeBg) return { background: BG_STYLES.dark }
+    if (activeBg.type === 'color' || activeBg.type === 'gradient' || activeBg.type === 'css') return { background: activeBg.value }
+    if ((activeBg.type === 'image' || activeBg.type === 'gif') && activeBg.thumbnail) {
+      return { backgroundImage: `url(${activeBg.thumbnail})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    }
+    return { background: '#111' }
+  })()
 
   return (
     <aside className={cn(
@@ -79,7 +85,7 @@ export function LivePanel() {
           {library.slice(0, 5).map(item => (
             <button
               key={item.id}
-              onClick={() => project(item.content, liveBg)}
+              onClick={() => project(item.content)}
               className={cn(
                 'w-full text-left px-3 py-2 rounded-btn text-[12px] font-semibold',
                 'bg-brand-50 dark:bg-brand-950/20',

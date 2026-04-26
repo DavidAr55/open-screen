@@ -205,5 +205,36 @@ export const SCHEMA = {
   // ────────────────────────────────────────────────────────────────
   v5: `
     ALTER TABLE slide_presentations ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0;
+  `,
+
+  // ────────────────────────────────────────────────────────────────
+  //  v6 — Fondos de proyección personalizados
+  // ────────────────────────────────────────────────────────────────
+  v6: `
+    CREATE TABLE IF NOT EXISTS backgrounds (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      name        TEXT    NOT NULL,
+      type        TEXT    NOT NULL DEFAULT 'color',
+        -- 'color' | 'gradient' | 'image' | 'gif' | 'video'
+      value       TEXT    NOT NULL,
+        -- CSS string para color/gradient; ruta de archivo para image/gif/video
+      thumbnail   TEXT,
+        -- base64 de preview (para image/gif/video)
+      is_favorite INTEGER NOT NULL DEFAULT 0,
+      is_preset   INTEGER NOT NULL DEFAULT 0,
+        -- 1 = fondo del sistema (no se puede eliminar)
+      created_at  TEXT    DEFAULT (datetime('now'))
+    );
+
+    -- Fondos predeterminados del sistema
+    INSERT INTO backgrounds (name, type, value, is_preset) VALUES
+      ('Oscuro',       'gradient', 'radial-gradient(ellipse at 50% 35%, #1c0a0a, #000)', 1),
+      ('Rojo',         'gradient', 'radial-gradient(ellipse at 50% 30%, #4a0808, #1a0000)', 1),
+      ('Negro',        'color',    '#000000', 1),
+      ('Azul oscuro',  'gradient', 'linear-gradient(135deg, #0a0a2e 0%, #000010 100%)', 1),
+      ('Verde oscuro', 'gradient', 'linear-gradient(135deg, #0a1e0a 0%, #000800 100%)', 1);
+
+    CREATE INDEX IF NOT EXISTS idx_backgrounds_type ON backgrounds(type);
+    CREATE INDEX IF NOT EXISTS idx_backgrounds_fav  ON backgrounds(is_favorite);
   `
 }

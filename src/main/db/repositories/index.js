@@ -4,6 +4,7 @@ import { MediaRepository }             from './MediaRepository.js'
 import { BibleRepository }             from './BibleRepository.js'
 import { SongRepository }              from './SongRepository.js'
 import { SlidePresentationRepository } from './SlidePresentationRepository.js'
+import { BackgroundRepository }        from './BackgroundRepository.js'
 
 /**
  * Crea todas las instancias de repositorios.
@@ -18,5 +19,6 @@ export function createRepositories(db) {
     bible:         new BibleRepository(),
     songs:         new SongRepository(db),
     presentations: new SlidePresentationRepository(db),
+    backgrounds:   new BackgroundRepository(db),
   }
 }

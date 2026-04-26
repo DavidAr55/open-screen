@@ -56,4 +56,15 @@ contextBridge.exposeInMainWorld('api', {
     projectSlide:   (payload)    => ipcRenderer.send('presentations:projectSlide', payload),
     clearSlide:     ()           => ipcRenderer.send('presentations:clearSlide'),
   },
+  backgrounds: {
+    findAll:         (filters)  => ipcRenderer.invoke('backgrounds:findAll', filters),
+    findById:        (id)       => ipcRenderer.invoke('backgrounds:findById', id),
+    create:          (data)     => ipcRenderer.invoke('backgrounds:create', data),
+    update:          (id, data) => ipcRenderer.invoke('backgrounds:update', id, data),
+    delete:          (id)       => ipcRenderer.invoke('backgrounds:delete', id),
+    toggleFavorite:  (id)       => ipcRenderer.invoke('backgrounds:toggleFavorite', id),
+    pickFile:        ()         => ipcRenderer.invoke('backgrounds:pickFile'),
+    importConfirmed: (data)     => ipcRenderer.invoke('backgrounds:importConfirmed', data),
+    setActive:       (payload)  => ipcRenderer.send('backgrounds:setActive', payload),
+  },
 })
