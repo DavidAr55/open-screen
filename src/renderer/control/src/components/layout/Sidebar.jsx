@@ -1,479 +1,397 @@
-import { useState, useEffect } from 'react'
-import { useApp } from '../context/AppContext.jsx'
-import { Button, Card, Input, Select, SectionLabel } from '@shared/components/ui/index.jsx'
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
+import { useApp }     from '../../context/AppContext.jsx'
+import { Input, SectionLabel, Divider, Spinner } from '@shared/components/ui/index.jsx'
 import { cn } from '@shared/utils/cn.js'
 
 // ─── Iconos ───────────────────────────────────────────────────────────────────
-const MonitorIcon = () => (
-  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-    <rect x="2" y="3" width="20" height="14" rx="2" />
-    <line x1="8" y1="21" x2="16" y2="21" />
-    <line x1="12" y1="17" x2="12" y2="21" />
-  </svg>
-)
+const ProjectIcon = () => <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+const TrashIcon   = () => <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+const UpIcon      = () => <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="m18 15-6-6-6 6"/></svg>
+const DownIcon    = () => <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="m6 9 6 6 6-6"/></svg>
+const CopyIcon    = () => <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+const DragIcon    = () => <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor"><circle cx="3" cy="2.5" r="1.2"/><circle cx="7" cy="2.5" r="1.2"/><circle cx="3" cy="7" r="1.2"/><circle cx="7" cy="7" r="1.2"/><circle cx="3" cy="11.5" r="1.2"/><circle cx="7" cy="11.5" r="1.2"/></svg>
 
-const PaletteIcon = () => (
-  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10c.55 0 1-.45 1-1 0-.27-.11-.52-.29-.71-.18-.19-.29-.44-.29-.71 0-.55.45-1 1-1h1.18c3.03 0 5.5-2.47 5.5-5.5C20.1 5.48 16.62 2 12 2z" />
-    <circle cx="6.5" cy="11.5" r="1.5" />
-    <circle cx="9.5" cy="7.5" r="1.5" />
-    <circle cx="14.5" cy="7.5" r="1.5" />
-    <circle cx="17.5" cy="11.5" r="1.5" />
-  </svg>
-)
+const TYPE_BADGES = {
+  text:         { label: 'Texto',     color: 'bg-slate-100 dark:bg-slate-800 text-slate-500' },
+  song:         { label: 'Canción',   color: 'bg-purple-50 dark:bg-purple-950/30 text-purple-500' },
+  verse:        { label: 'Versículo', color: 'bg-red-50 dark:bg-red-950/30 text-red-500' },
+  announcement: { label: 'Anuncio',   color: 'bg-amber-50 dark:bg-amber-950/30 text-amber-500' },
+}
 
-const TypeIcon = () => (
-  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-    <polyline points="4 7 4 4 20 4 20 7" />
-    <line x1="9" y1="20" x2="15" y2="20" />
-    <line x1="12" y1="4" x2="12" y2="20" />
-  </svg>
-)
+const TYPE_LABELS = {
+  all: 'Todos', text: 'Texto', song: 'Canciones',
+  verse: 'Versículos', announcement: 'Anuncios',
+}
 
-const DatabaseIcon = () => (
-  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-    <ellipse cx="12" cy="5" rx="9" ry="3" />
-    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
-    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
-  </svg>
-)
+const NAV_ITEMS = [
+  { label: 'Control', icon: <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg> },
+  { label: 'Canciones', icon: <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> },
+  { label: 'Escrituras', icon: <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> },
+  { label: 'Presentaciones', icon: <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg> },
+]
 
-const InfoIcon = () => (
-  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-    <circle cx="12" cy="12" r="10" />
-    <line x1="12" y1="16" x2="12" y2="12" />
-    <line x1="12" y1="8" x2="12.01" y2="8" />
-  </svg>
-)
+// ─── Menú contextual ──────────────────────────────────────────────────────────
+function ContextMenu({ x, y, item, selectedIds, onProject, onDelete, onDeleteSelected, onMoveUp, onMoveDown, onDeselectAll, canMoveUp, canMoveDown, onClose }) {
+  const ref = useRef(null)
+  const multi = selectedIds.size > 1
 
-const GlobeIcon = () => (
-  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-    <circle cx="12" cy="12" r="10" />
-    <line x1="2" y1="12" x2="22" y2="12" />
-    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-  </svg>
-)
+  useEffect(() => {
+    const handle = (e) => { if (ref.current && !ref.current.contains(e.target)) onClose() }
+    const t = setTimeout(() => document.addEventListener('mousedown', handle), 50)
+    return () => { clearTimeout(t); document.removeEventListener('mousedown', handle) }
+  }, [onClose])
 
-const KeyIcon = () => (
-  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-    <path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4" />
-  </svg>
-)
+  const style = {
+    position: 'fixed',
+    top:  Math.min(y, window.innerHeight - 280),
+    left: Math.min(x, window.innerWidth  - 230),
+    zIndex: 9999,
+  }
 
-const FolderIcon = () => (
-  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-  </svg>
-)
+  const Sep = () => <div className="my-1 h-px bg-surface-muted dark:bg-dark-border" />
 
-// ─── Componente de Sección ────────────────────────────────────────────────────
-function SettingSection({ icon, title, children }) {
+  const MI = ({ icon, label, onClick, danger, disabled }) => (
+    <button disabled={disabled} onClick={() => { onClick(); onClose() }}
+      className={cn(
+        'w-full flex items-center gap-2.5 px-3 py-1.5 text-[12.5px] font-medium transition-colors text-left',
+        'disabled:opacity-35 disabled:pointer-events-none',
+        danger
+          ? 'text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30'
+          : 'text-slate-700 dark:text-slate-300 hover:bg-surface-soft dark:hover:bg-dark-card',
+      )}>
+      {icon && <span className="opacity-60 flex-shrink-0">{icon}</span>}
+      {label}
+    </button>
+  )
+
   return (
-    <Card className="p-5">
-      <div className="flex items-center gap-2.5 mb-4 pb-3 border-b border-surface-muted dark:border-dark-border">
-        <div className="text-brand-500 dark:text-brand-400">{icon}</div>
-        <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">{title}</h3>
+    <div ref={ref} style={style} className="w-56 py-1.5 rounded-xl bg-white dark:bg-dark-surface border border-surface-muted dark:border-dark-border shadow-card-md">
+      {/* Header */}
+      <div className="px-3 py-2 border-b border-surface-muted dark:border-dark-border mb-1">
+        {multi ? (
+          <p className="text-[11px] font-bold text-brand-500">{selectedIds.size} elementos seleccionados</p>
+        ) : (
+          <>
+            <p className="text-[12px] font-bold text-slate-800 dark:text-slate-200 truncate">{item.title}</p>
+            <p className="text-[10px] text-slate-400 truncate mt-0.5">{item.content.replace(/\n/g,' ').substring(0,45)}</p>
+          </>
+        )}
       </div>
-      <div className="space-y-4">
-        {children}
-      </div>
-    </Card>
+
+      <MI icon={<ProjectIcon />} label={multi ? `Proyectar "${item.title}"` : 'Proyectar'} onClick={onProject} />
+      <MI icon={<CopyIcon />} label="Copiar texto" onClick={() => navigator.clipboard.writeText(item.content)} />
+
+      {!multi && (
+        <>
+          <Sep />
+          <MI icon={<UpIcon />}   label="Subir"  onClick={onMoveUp}   disabled={!canMoveUp} />
+          <MI icon={<DownIcon />} label="Bajar"  onClick={onMoveDown} disabled={!canMoveDown} />
+          <Sep />
+          <MI icon={<TrashIcon />} label="Eliminar" onClick={onDelete} danger />
+        </>
+      )}
+
+      {multi && (
+        <>
+          <Sep />
+          <MI icon={<TrashIcon />} label={`Eliminar seleccionados (${selectedIds.size})`} onClick={onDeleteSelected} danger />
+          <MI label="Deseleccionar todo" onClick={onDeselectAll} />
+        </>
+      )}
+    </div>
   )
 }
 
-// ─── Componente de Setting Individual ─────────────────────────────────────────
-function SettingItem({ label, description, children }) {
+// ─── Item individual ──────────────────────────────────────────────────────────
+function LibraryItem({ item, index, isSelected, isActive, selectedIds, onSelect, onProject, onContextMenu, onDragStart, onDragOver, onDragEnd, onDrop, isDragging, isDragOver }) {
+  const clickTimer = useRef(null)
+  const badge = TYPE_BADGES[item.type]
+
+  const handleClick = (e) => {
+    e.stopPropagation()
+    if (e.ctrlKey || e.metaKey) { onSelect(item, 'toggle'); return }
+    if (e.shiftKey) { onSelect(item, 'range'); return }
+    if (clickTimer.current) {
+      clearTimeout(clickTimer.current); clickTimer.current = null
+      onProject(item)
+    } else {
+      clickTimer.current = setTimeout(() => { clickTimer.current = null; onSelect(item, 'single') }, 210)
+    }
+  }
+
+  const handleContextMenu = (e) => {
+    e.preventDefault()
+    if (!selectedIds.has(item.id)) onSelect(item, 'single')
+    onContextMenu(e, item, index)
+  }
+
   return (
-    <div className="flex items-start justify-between gap-4">
-      <div className="flex-1">
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
-          {label}
-        </label>
-        {description && (
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            {description}
-          </p>
-        )}
+    <div
+      draggable
+      onDragStart={() => onDragStart(index)}
+      onDragOver={(e) => { e.preventDefault(); onDragOver(index) }}
+      onDrop={() => onDrop(index)}
+      onDragEnd={onDragEnd}
+      onClick={handleClick}
+      onContextMenu={handleContextMenu}
+      title="Clic: seleccionar · Ctrl+clic: multi · Doble clic: proyectar · Clic derecho: opciones"
+      className={cn(
+        'group relative flex items-start gap-2 px-2 py-2 rounded-lg border cursor-pointer transition-all duration-100 select-none',
+        isDragOver  && 'border-brand-400 dark:border-brand-600 bg-brand-50/50 dark:bg-brand-950/20 scale-[1.01]',
+        isDragging  && 'opacity-25 scale-95',
+        isSelected  && !isDragOver && 'bg-brand-50 dark:bg-brand-950/30 border-brand-200 dark:border-brand-900',
+        isActive    && !isSelected && !isDragOver && 'bg-surface-soft dark:bg-dark-card border-surface-muted dark:border-dark-border',
+        !isSelected && !isActive   && !isDragOver && 'border-transparent hover:bg-surface-soft dark:hover:bg-dark-card',
+      )}
+    >
+      {/* Drag handle */}
+      <span className="mt-0.5 flex-shrink-0 text-slate-300 dark:text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing">
+        <DragIcon />
+      </span>
+
+      {/* Checkbox */}
+      <div className={cn(
+        'flex-shrink-0 w-3.5 h-3.5 mt-0.5 rounded border-2 transition-all flex items-center justify-center',
+        isSelected
+          ? 'bg-brand-600 border-brand-600'
+          : 'border-slate-300 dark:border-slate-600 opacity-0 group-hover:opacity-100',
+      )}>
+        {isSelected && <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4L3.5 6L6.5 2" stroke="white" strokeWidth="1.5" strokeLinecap="round"/></svg>}
       </div>
-      <div className="flex-shrink-0">
-        {children}
+
+      {/* Contenido */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 mb-0.5">
+          <p className={cn('text-[13px] font-semibold truncate', isSelected ? 'text-brand-700 dark:text-brand-300' : 'text-slate-800 dark:text-slate-200')}>
+            {item.title}
+          </p>
+          {badge && <span className={cn('text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0', badge.color)}>{badge.label}</span>}
+        </div>
+        <p className="text-[11px] text-slate-400 dark:text-slate-600 truncate">{item.content.replace(/\n/g,' ')}</p>
       </div>
     </div>
   )
 }
 
-// ─── Toggle Switch ────────────────────────────────────────────────────────────
-function Toggle({ checked, onChange, disabled = false }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
-      className={cn(
-        'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-        'focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2',
-        'dark:focus:ring-offset-dark-bg',
-        checked
-          ? 'bg-brand-500'
-          : 'bg-slate-200 dark:bg-slate-700',
-        disabled && 'opacity-50 cursor-not-allowed'
-      )}
-    >
-      <span
-        className={cn(
-          'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
-          checked ? 'translate-x-6' : 'translate-x-1'
-        )}
-      />
-    </button>
-  )
-}
+// ─── Sidebar principal ────────────────────────────────────────────────────────
+export function Sidebar() {
+  const { activePage, setActivePage, library, libLoading, deleteItem, deleteMany, project, liveBg } = useApp()
 
-// ─── Página Principal ─────────────────────────────────────────────────────────
-export function SettingsPage() {
-  const { theme, setTheme, displays } = useApp()
-  
-  // Estados temporales para las opciones (de momento no hacen nada real)
-  const [settings, setSettings] = useState({
-    // Proyección
-    activeMonitor: 'secondary',
-    projectionBg: 'dark',
-    autoHideControls: false,
-    
-    // Apariencia
-    fontSize: 'auto',
-    fontFamily: 'Plus Jakarta Sans',
-    animationSpeed: 'normal',
-    
-    // Biblias
-    defaultVersion: 'rv1960',
-    showVerseNumbers: true,
-    
-    // Base de datos
-    autoBackup: true,
-    backupFrequency: 'weekly',
-    
-    // General
-    language: 'es',
-    checkUpdates: true,
-    startOnLogin: false,
-  })
+  const [search,     setSearch]     = useState('')
+  const [typeFilter, setTypeFilter] = useState('all')
+  const [activeId,   setActiveId]   = useState(null)
+  const [selectedIds, setSelectedIds] = useState(new Set())
+  const lastClickedIndex = useRef(null)
 
-  // Cargar configuración al montar
+  // Drag & drop
+  const [dragFromIndex, setDragFromIndex] = useState(null)
+  const [dragOverIndex, setDragOverIndex] = useState(null)
+
+  // Context menu
+  const [ctxMenu, setCtxMenu] = useState(null)
+
+  // Orden local (drag & drop persiste en sesión)
+  const [localOrder, setLocalOrder] = useState([])
+
   useEffect(() => {
-    async function loadSettings() {
-      try {
-        const savedSettings = await window.api?.settings.getAll()
-        if (savedSettings) {
-          setSettings(prev => ({ ...prev, ...savedSettings }))
-        }
-      } catch (error) {
-        console.error('Error loading settings:', error)
-      }
+    setLocalOrder(prev => {
+      // Añadir nuevos IDs al final, mantener orden existente
+      const existing = new Set(prev)
+      const newIds = library.filter(i => !existing.has(i.id)).map(i => i.id)
+      const validIds = prev.filter(id => library.some(i => i.id === id))
+      return [...validIds, ...newIds]
+    })
+  }, [library])
+
+  const filteredItems = useMemo(() => {
+    const filtered = library.filter(item => {
+      const matchSearch = !search ||
+        item.title.toLowerCase().includes(search.toLowerCase()) ||
+        item.content.toLowerCase().includes(search.toLowerCase())
+      return matchSearch && (typeFilter === 'all' || item.type === typeFilter)
+    })
+    const orderMap = new Map(localOrder.map((id, i) => [id, i]))
+    return [...filtered].sort((a, b) => (orderMap.get(a.id) ?? 9999) - (orderMap.get(b.id) ?? 9999))
+  }, [library, search, typeFilter, localOrder])
+
+  // ── Selección ─────────────────────────────────────────────────────────────
+  const handleSelect = useCallback((item, mode) => {
+    setActiveId(item.id)
+    if (mode === 'single') {
+      setSelectedIds(new Set([item.id]))
+      lastClickedIndex.current = filteredItems.findIndex(i => i.id === item.id)
+    } else if (mode === 'toggle') {
+      setSelectedIds(prev => { const n = new Set(prev); n.has(item.id) ? n.delete(item.id) : n.add(item.id); return n })
+      lastClickedIndex.current = filteredItems.findIndex(i => i.id === item.id)
+    } else if (mode === 'range') {
+      const cur  = filteredItems.findIndex(i => i.id === item.id)
+      const from = Math.min(lastClickedIndex.current ?? 0, cur)
+      const to   = Math.max(lastClickedIndex.current ?? 0, cur)
+      setSelectedIds(new Set(filteredItems.slice(from, to + 1).map(i => i.id)))
     }
-    loadSettings()
-  }, [])
+  }, [filteredItems])
 
-  const updateSetting = async (key, value) => {
-    setSettings(prev => ({ ...prev, [key]: value }))
-    // Aquí puedes guardar en la base de datos si lo deseas
-    try {
-      await window.api?.settings.set(key, value)
-    } catch (error) {
-      console.error('Error saving setting:', error)
-    }
-  }
+  // ── Proyectar ──────────────────────────────────────────────────────────────
+  const handleProject = useCallback((item) => {
+    project(item.content, liveBg)
+    setActiveId(item.id)
+  }, [project, liveBg])
 
-  const handleOpenBiblesDir = async () => {
-    await window.api?.bible.openBiblesDir()
-  }
+  // ── Eliminar ───────────────────────────────────────────────────────────────
+  const handleDelete = useCallback(async (id) => {
+    await deleteItem(id)
+    setSelectedIds(prev => { const n = new Set(prev); n.delete(id); return n })
+  }, [deleteItem])
 
-  const handleExportData = () => {
-    console.log('Exportar datos...')
-    // TODO: Implementar exportación
-  }
+  const handleDeleteSelected = useCallback(async () => {
+    await deleteMany([...selectedIds])
+    setSelectedIds(new Set())
+  }, [selectedIds, deleteMany])
 
-  const handleImportData = () => {
-    console.log('Importar datos...')
-    // TODO: Implementar importación
-  }
+  // ── Mover ─────────────────────────────────────────────────────────────────
+  const moveItem = useCallback((index, dir) => {
+    const newOrder = [...localOrder]
+    const id       = filteredItems[index]?.id
+    const pos      = newOrder.indexOf(id)
+    const swap     = dir === 'up' ? pos - 1 : pos + 1
+    if (swap < 0 || swap >= newOrder.length) return
+    ;[newOrder[pos], newOrder[swap]] = [newOrder[swap], newOrder[pos]]
+    setLocalOrder(newOrder)
+  }, [localOrder, filteredItems])
+
+  // ── Drag & drop ───────────────────────────────────────────────────────────
+  const handleDrop = useCallback((toIndex) => {
+    if (dragFromIndex === null || dragFromIndex === toIndex) return
+    const newOrder = [...localOrder]
+    const fromId   = filteredItems[dragFromIndex]?.id
+    const toId     = filteredItems[toIndex]?.id
+    const fromPos  = newOrder.indexOf(fromId)
+    const toPos    = newOrder.indexOf(toId)
+    newOrder.splice(fromPos, 1)
+    newOrder.splice(toPos, 0, fromId)
+    setLocalOrder(newOrder)
+    setDragFromIndex(null)
+    setDragOverIndex(null)
+  }, [dragFromIndex, localOrder, filteredItems])
 
   return (
-    <main className="flex-1 overflow-y-auto">
-      <div className="max-w-4xl mx-auto p-6 space-y-6">
-        
-        {/* Título */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50">
-            Ajustes
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Configura Open Screen según tus preferencias
+    <aside
+      className={cn(
+        'w-56 flex-shrink-0 flex flex-col py-4 px-3 overflow-hidden',
+        'bg-white dark:bg-dark-surface',
+        'border-r border-surface-muted dark:border-dark-border transition-colors duration-300',
+      )}
+      onClick={() => ctxMenu && setCtxMenu(null)}
+    >
+      {/* Nav */}
+      <nav className="mb-4">
+        <SectionLabel className="px-2 mb-2">Menú</SectionLabel>
+        {NAV_ITEMS.map(item => (
+          <div key={item.label} className={cn('nav-item', activePage === item.label && 'active')}
+            onClick={() => setActivePage(item.label)}>
+            {item.icon}{item.label}
+          </div>
+        ))}
+      </nav>
+
+      <Divider className="mb-4" />
+
+      {/* Header biblioteca */}
+      <div className="flex items-center justify-between px-0.5 mb-2">
+        <SectionLabel>Biblioteca</SectionLabel>
+        {selectedIds.size > 0 && (
+          <button
+            onClick={(e) => { e.stopPropagation(); handleDeleteSelected() }}
+            className="text-[10px] font-semibold text-red-400 hover:text-red-600 flex items-center gap-1 transition-colors"
+            title={`Eliminar ${selectedIds.size} seleccionados`}
+          >
+            <TrashIcon /> {selectedIds.size}
+          </button>
+        )}
+      </div>
+
+      {/* Búsqueda */}
+      <div className="relative mb-2">
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        <Input className="pl-7 text-[13px] py-1.5" placeholder="Buscar…" value={search} onChange={e => setSearch(e.target.value)} />
+      </div>
+
+      {/* Filtros */}
+      <div className="flex flex-wrap gap-1 mb-2">
+        {Object.entries(TYPE_LABELS).map(([key, label]) => (
+          <button key={key} onClick={() => setTypeFilter(key)}
+            className={cn(
+              'text-[10px] font-semibold px-2 py-0.5 rounded-full border transition-all',
+              typeFilter === key
+                ? 'bg-brand-50 dark:bg-brand-950/30 text-brand-600 dark:text-brand-400 border-brand-300 dark:border-brand-800'
+                : 'border-surface-muted dark:border-dark-border text-slate-400 hover:text-slate-600',
+            )}
+          >{label}</button>
+        ))}
+      </div>
+
+      {/* Multi-select hint */}
+      {selectedIds.size > 1 && (
+        <div className="mb-2 px-2 py-1.5 rounded-lg bg-brand-50 dark:bg-brand-950/20 border border-brand-100 dark:border-brand-900">
+          <p className="text-[10px] text-brand-600 dark:text-brand-400 font-semibold">
+            {selectedIds.size} seleccionados · Ctrl+clic para añadir
           </p>
         </div>
+      )}
 
-        {/* Apariencia */}
-        <SettingSection icon={<PaletteIcon />} title="Apariencia">
-          <SettingItem 
-            label="Tema" 
-            description="Elige entre tema claro u oscuro"
-          >
-            <Select
-              value={theme}
-              onChange={(e) => setTheme(e.target.value)}
-              className="w-36"
-            >
-              <option value="light">Claro</option>
-              <option value="dark">Oscuro</option>
-            </Select>
-          </SettingItem>
-
-          <SettingItem 
-            label="Fuente" 
-            description="Fuente tipográfica para la interfaz"
-          >
-            <Select
-              value={settings.fontFamily}
-              onChange={(e) => updateSetting('fontFamily', e.target.value)}
-              className="w-48"
-            >
-              <option value="Plus Jakarta Sans">Plus Jakarta Sans</option>
-              <option value="Inter">Inter</option>
-              <option value="System">Sistema</option>
-            </Select>
-          </SettingItem>
-
-          <SettingItem 
-            label="Velocidad de animaciones" 
-            description="Controla la velocidad de las transiciones"
-          >
-            <Select
-              value={settings.animationSpeed}
-              onChange={(e) => updateSetting('animationSpeed', e.target.value)}
-              className="w-36"
-            >
-              <option value="slow">Lenta</option>
-              <option value="normal">Normal</option>
-              <option value="fast">Rápida</option>
-            </Select>
-          </SettingItem>
-        </SettingSection>
-
-        {/* Proyección */}
-        <SettingSection icon={<MonitorIcon />} title="Proyección">
-          <SettingItem 
-            label="Monitor activo" 
-            description="Selecciona en qué pantalla proyectar"
-          >
-            <Select
-              value={settings.activeMonitor}
-              onChange={(e) => updateSetting('activeMonitor', e.target.value)}
-              className="w-44"
-            >
-              <option value="primary">Principal</option>
-              <option value="secondary">Secundaria</option>
-              {displays.length > 2 && <option value="third">Tercera</option>}
-            </Select>
-          </SettingItem>
-
-          <SettingItem 
-            label="Fondo predeterminado" 
-            description="Fondo que se usa al iniciar"
-          >
-            <Select
-              value={settings.projectionBg}
-              onChange={(e) => updateSetting('projectionBg', e.target.value)}
-              className="w-36"
-            >
-              <option value="dark">Oscuro</option>
-              <option value="red">Rojo</option>
-              <option value="black">Negro</option>
-            </Select>
-          </SettingItem>
-
-          <SettingItem 
-            label="Ocultar controles automáticamente" 
-            description="Esconde controles al proyectar en pantalla completa"
-          >
-            <Toggle
-              checked={settings.autoHideControls}
-              onChange={(val) => updateSetting('autoHideControls', val)}
-            />
-          </SettingItem>
-
-          <SettingItem 
-            label="Tamaño de fuente" 
-            description="Tamaño de texto en proyección"
-          >
-            <Select
-              value={settings.fontSize}
-              onChange={(e) => updateSetting('fontSize', e.target.value)}
-              className="w-36"
-            >
-              <option value="auto">Automático</option>
-              <option value="small">Pequeño</option>
-              <option value="medium">Mediano</option>
-              <option value="large">Grande</option>
-            </Select>
-          </SettingItem>
-        </SettingSection>
-
-        {/* Biblias */}
-        <SettingSection icon={<TypeIcon />} title="Biblias">
-          <SettingItem 
-            label="Versión predeterminada" 
-            description="Biblia que se abre por defecto"
-          >
-            <Select
-              value={settings.defaultVersion}
-              onChange={(e) => updateSetting('defaultVersion', e.target.value)}
-              className="w-44"
-            >
-              <option value="rv1960">Reina Valera 1960</option>
-              <option value="nvi">Nueva Versión Internacional</option>
-              <option value="kjv">King James Version</option>
-            </Select>
-          </SettingItem>
-
-          <SettingItem 
-            label="Mostrar números de versículo" 
-            description="Incluir numeración en proyección"
-          >
-            <Toggle
-              checked={settings.showVerseNumbers}
-              onChange={(val) => updateSetting('showVerseNumbers', val)}
-            />
-          </SettingItem>
-
-          <SettingItem 
-            label="Carpeta de biblias" 
-            description="Administra tus módulos .osb"
-          >
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={handleOpenBiblesDir}
-            >
-              <FolderIcon />
-              Abrir carpeta
-            </Button>
-          </SettingItem>
-        </SettingSection>
-
-        {/* Base de datos */}
-        <SettingSection icon={<DatabaseIcon />} title="Base de datos">
-          <SettingItem 
-            label="Respaldo automático" 
-            description="Crear copias de seguridad automáticas"
-          >
-            <Toggle
-              checked={settings.autoBackup}
-              onChange={(val) => updateSetting('autoBackup', val)}
-            />
-          </SettingItem>
-
-          <SettingItem 
-            label="Frecuencia de respaldo" 
-            description="Cada cuánto hacer backup"
-          >
-            <Select
-              value={settings.backupFrequency}
-              onChange={(e) => updateSetting('backupFrequency', e.target.value)}
-              className="w-36"
-              disabled={!settings.autoBackup}
-            >
-              <option value="daily">Diario</option>
-              <option value="weekly">Semanal</option>
-              <option value="monthly">Mensual</option>
-            </Select>
-          </SettingItem>
-
-          <SettingItem 
-            label="Exportar/Importar" 
-            description="Migra tu contenido a otro equipo"
-          >
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleExportData}
-              >
-                Exportar
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleImportData}
-              >
-                Importar
-              </Button>
-            </div>
-          </SettingItem>
-        </SettingSection>
-
-        {/* General */}
-        <SettingSection icon={<GlobeIcon />} title="General">
-          <SettingItem 
-            label="Idioma" 
-            description="Idioma de la interfaz"
-          >
-            <Select
-              value={settings.language}
-              onChange={(e) => updateSetting('language', e.target.value)}
-              className="w-36"
-            >
-              <option value="es">Español</option>
-              <option value="en">English</option>
-              <option value="pt">Português</option>
-            </Select>
-          </SettingItem>
-
-          <SettingItem 
-            label="Buscar actualizaciones" 
-            description="Notificar cuando haya nueva versión"
-          >
-            <Toggle
-              checked={settings.checkUpdates}
-              onChange={(val) => updateSetting('checkUpdates', val)}
-            />
-          </SettingItem>
-
-          <SettingItem 
-            label="Iniciar con el sistema" 
-            description="Abrir Open Screen al encender el equipo"
-          >
-            <Toggle
-              checked={settings.startOnLogin}
-              onChange={(val) => updateSetting('startOnLogin', val)}
-            />
-          </SettingItem>
-        </SettingSection>
-
-        {/* Acerca de */}
-        <SettingSection icon={<InfoIcon />} title="Acerca de">
-          <div className="space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-slate-600 dark:text-slate-400">Versión</span>
-              <span className="font-mono text-slate-900 dark:text-slate-100">1.0.0</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-600 dark:text-slate-400">Licencia</span>
-              <span className="font-mono text-slate-900 dark:text-slate-100">MIT</span>
-            </div>
-            <div className="pt-3 border-t border-surface-muted dark:border-dark-border">
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Open Screen — Software de proyección para iglesias y eventos.
-                Desarrollado con ❤️ por la comunidad.
-              </p>
-            </div>
-          </div>
-        </SettingSection>
-
-        {/* Espacio final */}
-        <div className="h-8" />
+      {/* Lista */}
+      <div className="flex-1 overflow-y-auto -mr-1 pr-1 space-y-0.5">
+        {libLoading ? (
+          <div className="flex justify-center py-6"><Spinner size={18} /></div>
+        ) : filteredItems.length === 0 ? (
+          <p className="text-center text-[12px] text-slate-400 py-6">
+            {search ? 'Sin resultados' : 'Biblioteca vacía'}
+          </p>
+        ) : filteredItems.map((item, index) => (
+          <LibraryItem
+            key={item.id} item={item} index={index}
+            isSelected={selectedIds.has(item.id)}
+            isActive={activeId === item.id}
+            selectedIds={selectedIds}
+            onSelect={handleSelect}
+            onProject={handleProject}
+            onContextMenu={(e, it, idx) => setCtxMenu({ x: e.clientX, y: e.clientY, item: it, index: idx })}
+            onDragStart={(i) => setDragFromIndex(i)}
+            onDragOver={(i) => setDragOverIndex(i)}
+            onDragEnd={() => { setDragFromIndex(null); setDragOverIndex(null) }}
+            onDrop={handleDrop}
+            isDragging={dragFromIndex === index}
+            isDragOver={dragOverIndex === index && dragFromIndex !== index}
+          />
+        ))}
       </div>
-    </main>
+
+      {/* Footer */}
+      <Divider className="mt-auto mb-2" />
+      <div className="nav-item">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Ajustes
+      </div>
+
+      {/* Context menu */}
+      {ctxMenu && (
+        <ContextMenu
+          x={ctxMenu.x} y={ctxMenu.y}
+          item={ctxMenu.item}
+          selectedIds={selectedIds}
+          onProject={() => handleProject(ctxMenu.item)}
+          onDelete={() => handleDelete(ctxMenu.item.id)}
+          onDeleteSelected={handleDeleteSelected}
+          onMoveUp={() => moveItem(ctxMenu.index, 'up')}
+          onMoveDown={() => moveItem(ctxMenu.index, 'down')}
+          onDeselectAll={() => setSelectedIds(new Set())}
+          canMoveUp={ctxMenu.index > 0}
+          canMoveDown={ctxMenu.index < filteredItems.length - 1}
+          onClose={() => setCtxMenu(null)}
+        />
+      )}
+    </aside>
   )
 }
