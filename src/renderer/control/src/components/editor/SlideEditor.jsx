@@ -17,7 +17,7 @@ export const BG_STYLES = {
 }
 
 export function SlideEditor() {
-  const { liveBg, setLiveBg, project, createItem } = useApp()
+  const { liveBg, setLiveBg, project, createItem, activeBg } = useApp()
   const { activeItem } = useLibrary()
 
   const [text, setText] = useState('')
@@ -40,16 +40,49 @@ export function SlideEditor() {
     await createItem({ title, content: trimmed, type: 'text' })
   }
 
-  const previewStyle = {
-    background: BG_STYLES[liveBg],
-  }
+  // Espejo del fondo activo: usa activeBg del panel si existe, o el preset legacy
+  const effectiveBg = activeBg ?? { type: 'gradient', value: BG_STYLES[liveBg] ?? BG_STYLES.dark }
+  const isMedia = effectiveBg.type === 'image' || effectiveBg.type === 'gif' || effectiveBg.type === 'video'
 
   return (
     <div className="flex flex-col gap-3 h-full">
 
       {/* Preview 16:9 */}
       <div className="slide-canvas w-full max-w-2xl mx-auto animate-fade-up">
-        <div className="absolute inset-0 transition-all duration-500" style={previewStyle} />
+        {/* Fondo: color / gradiente */}
+        {!isMedia && (
+          <div className="absolute inset-0 transition-all duration-500" style={{ background: effectiveBg.value }} />
+        )}
+
+        {/* Fondo: imagen / GIF */}
+        {(effectiveBg.type === 'image' || effectiveBg.type === 'gif') && (
+          <>
+            <img
+              src={effectiveBg.thumbnail || effectiveBg.value}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.38)' }} />
+          </>
+        )}
+
+        {/* Fondo: video */}
+        {effectiveBg.type === 'video' && (
+          <>
+            <video
+              key={effectiveBg.value}
+              src={effectiveBg.value}
+              loop
+              muted
+              autoPlay
+              playsInline
+              onCanPlay={e => e.target.play().catch(() => {})}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.4)' }} />
+          </>
+        )}
+
         <span className="absolute top-2.5 left-3 font-mono text-[10px] text-white/20 tracking-wider select-none">
           PREVIEW
         </span>
