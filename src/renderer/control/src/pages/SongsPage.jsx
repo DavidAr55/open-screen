@@ -484,7 +484,7 @@ function SongEditor({ song, onSave, onCancel }) {
 }
 
 // ─── Proyector de canción ─────────────────────────────────────────────────────
-function SongProjector({ song, liveBg, onBack }) {
+function SongProjector({ song, liveBg, activeBg, onBack }) {
   const { project } = useApp()
   const allSections = buildAllSections(song)
   const [activeIdx, setActiveIdx] = useState(0)
@@ -522,7 +522,8 @@ function SongProjector({ song, liveBg, onBack }) {
     return () => window.removeEventListener('keydown', handler)
   }, [activeIdx, allSections, projectSection])
 
-  const bg = BG_MAP[liveBg] ?? BG_MAP.dark
+  const effectiveBg = activeBg ?? { type: 'gradient', value: BG_MAP[liveBg] ?? BG_MAP.dark }
+  const isMedia = effectiveBg.type === 'image' || effectiveBg.type === 'gif' || effectiveBg.type === 'video'
   const activeSection = allSections[activeIdx]
   const total = allSections.length
 
@@ -579,7 +580,19 @@ function SongProjector({ song, liveBg, onBack }) {
 
       <div className="flex-1 flex flex-col gap-3">
         <div className="slide-canvas" style={{ flex: '1', maxHeight: '60%' }}>
-          <div className="absolute inset-0 transition-all duration-500" style={{ background: bg }} />
+          {!isMedia && <div className="absolute inset-0 transition-all duration-500" style={{ background: effectiveBg.value }} />}
+          {(effectiveBg.type === 'image' || effectiveBg.type === 'gif') && (
+            <>
+              <img src={effectiveBg.thumbnail || effectiveBg.value} alt="" className="absolute inset-0 w-full h-full object-cover" />
+              <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.38)' }} />
+            </>
+          )}
+          {effectiveBg.type === 'video' && (
+            <>
+              <video key={effectiveBg.value} src={effectiveBg.value} loop muted autoPlay playsInline onCanPlay={e => e.target.play().catch(() => {})} className="absolute inset-0 w-full h-full object-cover" />
+              <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.4)' }} />
+            </>
+          )}
           <span className="absolute top-2.5 left-3 font-mono text-[10px] text-white/20 tracking-wider">PREVIEW</span>
           <div className="absolute inset-0 flex flex-col items-center justify-center p-8 gap-3 overflow-hidden">
             {activeSection && (
@@ -640,9 +653,10 @@ function SongProjector({ song, liveBg, onBack }) {
 }
 
 // ─── Slide mini-preview (para el modo grid) ───────────────────────────────────
-function SlideGridCard({ section, isActive, index, total, onSelect, onProject, bg }) {
+function SlideGridCard({ section, isActive, index, total, onSelect, onProject, effectiveBg }) {
   const lines = (section.lyrics || '').split('\n').length
   const fontSize = lines > 6 ? 5 : lines > 4 ? 6 : lines > 2 ? 7 : 9
+  const isMedia = effectiveBg && (effectiveBg.type === 'image' || effectiveBg.type === 'gif' || effectiveBg.type === 'video')
 
   return (
     <div
@@ -657,7 +671,16 @@ function SlideGridCard({ section, isActive, index, total, onSelect, onProject, b
       )}
       style={{ aspectRatio: '16/9' }}
     >
-      <div className="absolute inset-0" style={{ background: bg }} />
+      {!isMedia && <div className="absolute inset-0" style={{ background: effectiveBg?.value }} />}
+      {isMedia && (effectiveBg.type === 'image' || effectiveBg.type === 'gif') && (
+        <>
+          <img src={effectiveBg.thumbnail || effectiveBg.value} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.38)' }} />
+        </>
+      )}
+      {isMedia && effectiveBg.type === 'video' && (
+        <div className="absolute inset-0" style={{ background: '#000' }} />
+      )}
 
       <div className="absolute top-1.5 left-2 font-mono text-white/30 text-[8px] font-bold select-none">
         {index + 1}/{total}
@@ -686,11 +709,12 @@ function SlideGridCard({ section, isActive, index, total, onSelect, onProject, b
 }
 
 // ─── Detalle de canción ───────────────────────────────────────────────────────
-function SongDetail({ song, liveBg, onOpenProjector, onEdit, onDelete, onProjectSection, isLive, onClearLive }) {
+function SongDetail({ song, liveBg, activeBg, onOpenProjector, onEdit, onDelete, onProjectSection, isLive, onClearLive }) {
   const allSections = buildAllSections(song)
   const [activeIdx, setActiveIdx] = useState(0)
   const [detailView, setDetailView] = useState('list')
-  const bg = BG_MAP[liveBg] ?? BG_MAP.dark
+  const effectiveBg = activeBg ?? { type: 'gradient', value: BG_MAP[liveBg] ?? BG_MAP.dark }
+  const isMedia = effectiveBg.type === 'image' || effectiveBg.type === 'gif' || effectiveBg.type === 'video'
   const activeSection = allSections[activeIdx]
 
   const handleProjectSection = useCallback((section) => {
@@ -863,7 +887,19 @@ function SongDetail({ song, liveBg, onOpenProjector, onEdit, onDelete, onProject
 
           <div className="flex-1 flex flex-col gap-3 overflow-hidden">
             <div className="slide-canvas flex-shrink-0" style={{ maxHeight: '60%' }}>
-              <div className="absolute inset-0" style={{ background: bg }} />
+              {!isMedia && <div className="absolute inset-0 transition-all duration-500" style={{ background: effectiveBg.value }} />}
+              {(effectiveBg.type === 'image' || effectiveBg.type === 'gif') && (
+                <>
+                  <img src={effectiveBg.thumbnail || effectiveBg.value} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                  <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.38)' }} />
+                </>
+              )}
+              {effectiveBg.type === 'video' && (
+                <>
+                  <video key={effectiveBg.value} src={effectiveBg.value} loop muted autoPlay playsInline onCanPlay={e => e.target.play().catch(() => {})} className="absolute inset-0 w-full h-full object-cover" />
+                  <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.4)' }} />
+                </>
+              )}
               <span className="absolute top-2.5 left-3 font-mono text-[10px] text-white/20 tracking-wider">PREVIEW</span>
               <div className="absolute inset-0 flex flex-col items-center justify-center p-6 gap-2 overflow-hidden">
                 {activeSection && (
@@ -910,7 +946,7 @@ function SongDetail({ song, liveBg, onOpenProjector, onEdit, onDelete, onProject
                   index={idx}
                   total={allSections.length}
                   isActive={activeIdx === idx}
-                  bg={bg}
+                  effectiveBg={effectiveBg}
                   onSelect={() => setActiveIdx(idx)}
                   onProject={() => {
                     setActiveIdx(idx)
@@ -1170,7 +1206,7 @@ function SongListItem({
 }
 
 export function SongsPage() {
-  const { project, liveBg, isLive, clearProjection, refreshLibrary } = useApp()
+  const { project, liveBg, activeBg, isLive, clearProjection, refreshLibrary } = useApp()
 
   const [songs, setSongs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -1334,7 +1370,7 @@ export function SongsPage() {
   if (view === 'project' && activeSong) {
     return (
       <main className="flex-1 flex overflow-hidden">
-        <SongProjector song={activeSong} liveBg={liveBg} onBack={() => setView('list')} />
+        <SongProjector song={activeSong} liveBg={liveBg} activeBg={activeBg} onBack={() => setView('list')} />
       </main>
     )
   }
@@ -1461,6 +1497,7 @@ export function SongsPage() {
           <SongDetail
             song={activeSong}
             liveBg={liveBg}
+            activeBg={activeBg}
             isLive={isLive}
             onOpenProjector={handleProject}
             onEdit={async (s) => {

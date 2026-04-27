@@ -196,7 +196,7 @@ function VerseItem({ verse, isSelected, onSelect, onProject, onSave, searchQuery
 
 // ─── Página principal ─────────────────────────────────────────────────────────
 export function ScripturePage() {
-  const { project, liveBg, createItem, refreshLibrary } = useApp()
+  const { project, liveBg, activeBg, createItem, refreshLibrary } = useApp()
 
   const [mode,     setMode]     = useState('navigate')
   const [modules,  setModules]  = useState([])
@@ -531,7 +531,7 @@ export function ScripturePage() {
           <>
             {/* Preview — ocupa el espacio disponible, nunca más de 55vh */}
             <div className="flex-1 min-h-0 max-h-[55vh]">
-              <VersePreview verse={selectedVerse} liveBg={liveBg} />
+              <VersePreview verse={selectedVerse} liveBg={liveBg} activeBg={activeBg} />
             </div>
 
             {/* Referencia + texto */}
@@ -635,11 +635,24 @@ export function ScripturePage() {
 }
 
 // ─── Preview 16:9 ────────────────────────────────────────────────────────────
-function VersePreview({ verse, liveBg }) {
-  const bg = BG_STYLES[liveBg] ?? BG_STYLES.dark
+function VersePreview({ verse, liveBg, activeBg }) {
+  const effectiveBg = activeBg ?? { type: 'gradient', value: BG_STYLES[liveBg] ?? BG_STYLES.dark }
+  const isMedia = effectiveBg.type === 'image' || effectiveBg.type === 'gif' || effectiveBg.type === 'video'
   return (
     <div className="slide-canvas w-full h-full">
-      <div className="absolute inset-0 transition-all duration-500" style={{ background: bg }} />
+      {!isMedia && <div className="absolute inset-0 transition-all duration-500" style={{ background: effectiveBg.value }} />}
+      {(effectiveBg.type === 'image' || effectiveBg.type === 'gif') && (
+        <>
+          <img src={effectiveBg.thumbnail || effectiveBg.value} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.38)' }} />
+        </>
+      )}
+      {effectiveBg.type === 'video' && (
+        <>
+          <video key={effectiveBg.value} src={effectiveBg.value} loop muted autoPlay playsInline onCanPlay={e => e.target.play().catch(() => {})} className="absolute inset-0 w-full h-full object-cover" />
+          <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.4)' }} />
+        </>
+      )}
       <span className="absolute top-2.5 left-3 font-mono text-[10px] text-white/20 tracking-wider select-none">PREVIEW</span>
       <div className="absolute inset-0 flex flex-col items-center justify-center p-8 gap-3 overflow-hidden">
         <p className="text-white font-bold text-center leading-snug whitespace-pre-wrap transition-all"
