@@ -60,6 +60,12 @@ const KeyIcon = () => (
   </svg>
 )
 
+const ClickIcon = () => (
+  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+    <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/>
+  </svg>
+)
+
 const FolderIcon = () => (
   <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
     <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
@@ -131,9 +137,66 @@ function Toggle({ checked, onChange, disabled = false }) {
   )
 }
 
+// ─── Mapa de nombres de teclas ────────────────────────────────────────────────
+const KEY_NAMES = {
+  'ArrowRight': '→', 'ArrowLeft': '←', 'ArrowUp': '↑', 'ArrowDown': '↓',
+  ' ': 'Espacio', 'Backspace': '⌫', 'Enter': '↵ Enter', 'Escape': 'Esc',
+  'Tab': '⇥ Tab', 'Delete': 'Supr', 'Home': 'Inicio', 'End': 'Fin',
+  'PageUp': 'Re Pág', 'PageDown': 'Av Pág',
+  'F1':'F1','F2':'F2','F3':'F3','F4':'F4','F5':'F5','F6':'F6',
+  'F7':'F7','F8':'F8','F9':'F9','F10':'F10','F11':'F11','F12':'F12',
+}
+
+// ─── Captura de tecla ─────────────────────────────────────────────────────────
+function KeyCapture({ value, defaultValue, onChange }) {
+  const [capturing, setCapturing] = useState(false)
+
+  useEffect(() => {
+    if (!capturing) return
+    const handler = (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      if (e.key === 'Escape') { setCapturing(false); return }
+      if (['Control','Alt','Shift','Meta'].includes(e.key)) return
+      onChange(e.key)
+      setCapturing(false)
+    }
+    window.addEventListener('keydown', handler, true)
+    return () => window.removeEventListener('keydown', handler, true)
+  }, [capturing, onChange])
+
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        onClick={() => setCapturing(true)}
+        className={cn(
+          'min-w-[100px] px-3 py-1.5 rounded-lg border text-sm font-mono font-bold transition-all text-center',
+          capturing
+            ? 'border-brand-500 bg-brand-50 dark:bg-brand-950/30 text-brand-500 dark:text-brand-400 animate-pulse'
+            : 'border-surface-muted dark:border-dark-border bg-white dark:bg-dark-surface text-slate-700 dark:text-slate-200 hover:border-brand-400 dark:hover:border-brand-700 cursor-pointer',
+        )}
+      >
+        {capturing ? 'Presiona…' : (KEY_NAMES[value] || value)}
+      </button>
+      {value !== defaultValue && (
+        <button
+          onClick={() => onChange(defaultValue)}
+          title="Restablecer"
+          className="text-[13px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+        >
+          ↺
+        </button>
+      )}
+    </div>
+  )
+}
+
 // ─── Página Principal ─────────────────────────────────────────────────────────
 export function SettingsPage() {
-  const { theme, setTheme, displays } = useApp()
+  const { theme, setTheme, fontFamily, setFontFamily, animationSpeed, setAnimationSpeed,
+          displays, projectionClickMode, setProjClickMode,
+          keyNavNext, setKeyNavNext, keyNavPrev, setKeyNavPrev,
+          keyProjToggle, setKeyProjToggle } = useApp()
   
   // Estados temporales para las opciones (de momento no hacen nada real)
   const [settings, setSettings] = useState({
@@ -165,10 +228,25 @@ export function SettingsPage() {
   useEffect(() => {
     async function loadSettings() {
       try {
-        const savedSettings = await window.api?.settings.getAll()
-        if (savedSettings) {
-          setSettings(prev => ({ ...prev, ...savedSettings }))
-        }
+        const s = await window.api?.settings.getAll()
+        if (!s) return
+        setSettings(prev => ({
+          ...prev,
+          ...(s.activeMonitor    && { activeMonitor:    s.activeMonitor }),
+          ...(s.projectionBg     && { projectionBg:     s.projectionBg }),
+          ...(s.fontSize         && { fontSize:         s.fontSize }),
+          ...(s.fontFamily       && { fontFamily:       s.fontFamily }),
+          ...(s.animationSpeed   && { animationSpeed:   s.animationSpeed }),
+          ...(s.defaultVersion   && { defaultVersion:   s.defaultVersion }),
+          ...(s.backupFrequency  && { backupFrequency:  s.backupFrequency }),
+          ...(s.language         && { language:         s.language }),
+          // coercionar booleanos almacenados como string
+          autoHideControls: s.autoHideControls === 'true',
+          showVerseNumbers: s.showVerseNumbers !== 'false',
+          autoBackup:       s.autoBackup       !== 'false',
+          checkUpdates:     s.checkUpdates     !== 'false',
+          startOnLogin:     s.startOnLogin     === 'true',
+        }))
       } catch (error) {
         console.error('Error loading settings:', error)
       }
@@ -230,34 +308,72 @@ export function SettingsPage() {
             </Select>
           </SettingItem>
 
-          <SettingItem 
-            label="Fuente" 
+          <SettingItem
+            label="Fuente"
             description="Fuente tipográfica para la interfaz"
           >
             <Select
-              value={settings.fontFamily}
-              onChange={(e) => updateSetting('fontFamily', e.target.value)}
+              value={fontFamily}
+              onChange={(e) => setFontFamily(e.target.value)}
               className="w-48"
             >
-              <option value="Plus Jakarta Sans">Plus Jakarta Sans</option>
-              <option value="Inter">Inter</option>
-              <option value="System">Sistema</option>
+              <option value="jakarta">Plus Jakarta Sans</option>
+              <option value="inter">Inter</option>
+              <option value="system">Sistema</option>
             </Select>
           </SettingItem>
 
-          <SettingItem 
-            label="Velocidad de animaciones" 
-            description="Controla la velocidad de las transiciones"
+          <SettingItem
+            label="Velocidad de animaciones"
+            description="Controla la velocidad de las transiciones en la interfaz"
           >
             <Select
-              value={settings.animationSpeed}
-              onChange={(e) => updateSetting('animationSpeed', e.target.value)}
+              value={animationSpeed}
+              onChange={(e) => setAnimationSpeed(e.target.value)}
               className="w-36"
             >
               <option value="slow">Lenta</option>
               <option value="normal">Normal</option>
               <option value="fast">Rápida</option>
             </Select>
+          </SettingItem>
+        </SettingSection>
+
+        {/* Interacción */}
+        <SettingSection icon={<ClickIcon />} title="Interacción">
+          <SettingItem
+            label="Proyectar al hacer clic"
+            description="Un clic proyecta de inmediato; doble clic lo confirma primero"
+          >
+            <Select
+              value={projectionClickMode}
+              onChange={(e) => setProjClickMode(e.target.value)}
+              className="w-44"
+            >
+              <option value="double">Doble clic</option>
+              <option value="single">Un solo clic</option>
+            </Select>
+          </SettingItem>
+
+          <SettingItem
+            label="Tecla: avanzar"
+            description="Siguiente versículo o sección durante la proyección"
+          >
+            <KeyCapture value={keyNavNext} defaultValue="ArrowRight" onChange={setKeyNavNext} />
+          </SettingItem>
+
+          <SettingItem
+            label="Tecla: retroceder"
+            description="Versículo o sección anterior durante la proyección"
+          >
+            <KeyCapture value={keyNavPrev} defaultValue="ArrowLeft" onChange={setKeyNavPrev} />
+          </SettingItem>
+
+          <SettingItem
+            label="Tecla: proyectar / quitar"
+            description="Oculta o muestra la proyección desde cualquier página"
+          >
+            <KeyCapture value={keyProjToggle} defaultValue="F12" onChange={setKeyProjToggle} />
           </SettingItem>
         </SettingSection>
 

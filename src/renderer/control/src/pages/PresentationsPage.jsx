@@ -120,8 +120,25 @@ function PresContextMenu({ x, y, pres, onProject, onToggleFav, onSaveToLibrary, 
 }
 
 // ─── Thumbnail card con context menu ─────────────────────────────────────────
-function PresentationCard({ pres, isActive, onClick, onDelete, onToggleFav, onSaveToLibrary, onProject }) {
+function PresentationCard({ pres, isActive, onClick, onSelect, onDelete, onToggleFav, onSaveToLibrary, onProject }) {
+  const { projectionClickMode } = useApp()
+  const clickTimer = useRef(null)
   const [ctx, setCtx] = useState(null)
+
+  const handleClick = () => {
+    if (projectionClickMode === 'single') {
+      onClick()
+      return
+    }
+    if (clickTimer.current) {
+      clearTimeout(clickTimer.current)
+      clickTimer.current = null
+      onClick()
+    } else {
+      onSelect?.()
+      clickTimer.current = setTimeout(() => { clickTimer.current = null }, 220)
+    }
+  }
 
   const handleContextMenu = (e) => {
     e.preventDefault()
@@ -131,7 +148,7 @@ function PresentationCard({ pres, isActive, onClick, onDelete, onToggleFav, onSa
   return (
     <>
       <div
-        onClick={onClick}
+        onClick={handleClick}
         onContextMenu={handleContextMenu}
         className={cn(
           'group relative rounded-xl border cursor-pointer transition-all overflow-hidden',
@@ -214,9 +231,30 @@ function PresentationCard({ pres, isActive, onClick, onDelete, onToggleFav, onSa
 
 // ─── Slide grid card ──────────────────────────────────────────────────────────
 function SlideCard({ dataUrl, index, isActive, isLive, onClick, onProject }) {
+  const { projectionClickMode } = useApp()
+  const clickTimer = useRef(null)
+
+  const handleClick = (e) => {
+    e?.stopPropagation()
+    if (projectionClickMode === 'single') {
+      onClick()
+      onProject()
+      return
+    }
+    if (clickTimer.current) {
+      clearTimeout(clickTimer.current)
+      clickTimer.current = null
+      onClick()
+      onProject()
+    } else {
+      onClick()
+      clickTimer.current = setTimeout(() => { clickTimer.current = null }, 240)
+    }
+  }
+
   return (
     <div
-      onClick={onClick}
+      onClick={handleClick}
       className={cn(
         'relative rounded-xl overflow-hidden cursor-pointer border-2 transition-all group',
         isLive   ? 'border-green-500 shadow-[0_0_12px_rgba(34,197,94,.4)]' :
@@ -240,9 +278,9 @@ function SlideCard({ dataUrl, index, isActive, isLive, onClick, onProject }) {
         {isLive && <span className="ml-1 animate-blink">● LIVE</span>}
       </div>
 
-      {/* Project overlay */}
+      {/* Project overlay — respeta el modo de clic configurado */}
       <div
-        onClick={e => { e.stopPropagation(); onProject() }}
+        onClick={handleClick}
         className="absolute inset-0 bg-black/0 group-hover:bg-black/25 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100"
       >
         <div className="bg-brand-600/90 text-white rounded-full p-2">
@@ -255,6 +293,7 @@ function SlideCard({ dataUrl, index, isActive, isLive, onClick, onProject }) {
 
 // ─── Vista de proyección de presentación ──────────────────────────────────────
 function PresentationProjector({ pres, onBack }) {
+  const { isNavNext, isNavPrev } = useApp()
   const [slides, setSlides]     = useState([])   // array de dataURLs
   const [loading, setLoading]   = useState(true)
   const [progress, setProgress] = useState(0)
@@ -328,13 +367,13 @@ function PresentationProjector({ pres, onBack }) {
     if (liveIdx >= 0) projectSlide(newIdx)
   }
 
-  // Teclado: ←→ navegan y proyectan, Home=primero, End=último
+  // Teclado: teclas configuradas navegan y proyectan, Home=primero, End=último
   useEffect(() => {
     const handler = (e) => {
       if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); goNext() }
-      if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   { e.preventDefault(); goPrev() }
-      if (e.key === 'Enter' || e.key === ' ')               { e.preventDefault(); projectSlide(activeIdx) }
+      if (isNavNext(e.key))                 { e.preventDefault(); goNext() }
+      if (isNavPrev(e.key))                 { e.preventDefault(); goPrev() }
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); projectSlide(activeIdx) }
       if (e.key === 'Home') {
         e.preventDefault()
         setActiveIdx(0)
@@ -350,7 +389,7 @@ function PresentationProjector({ pres, onBack }) {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [activeIdx, liveIdx, projectSlide, goNext, goPrev, slides])
+  }, [activeIdx, liveIdx, projectSlide, goNext, goPrev, slides, isNavNext, isNavPrev])
 
   if (error) {
     return (
@@ -593,6 +632,7 @@ export function PresentationsPage() {
                 pres={pres}
                 isActive={activePres?.id === pres.id}
                 onClick={() => handleProject(pres)}
+                onSelect={() => setActivePres(pres)}
                 onDelete={() => handleDelete(pres.id)}
                 onToggleFav={() => handleToggleFav(pres.id)}
                 onSaveToLibrary={() => handleSaveToLibrary(pres)}

@@ -112,16 +112,34 @@ function SectionBadge({ type, active, className }) {
 
 // ─── SectionSlide (en vista detalle) ──────────────────────────────────────────
 function SectionSlide({ section, isActive, onClick, onProject }) {
+  const { projectionClickMode } = useApp()
+  const clickTimer = useRef(null)
+
+  const handleClick = () => {
+    onClick()
+    if (projectionClickMode === 'single') {
+      onProject()
+      return
+    }
+    if (clickTimer.current) {
+      clearTimeout(clickTimer.current)
+      clickTimer.current = null
+      onProject()
+    } else {
+      clickTimer.current = setTimeout(() => { clickTimer.current = null }, 220)
+    }
+  }
+
   return (
     <div
-      onClick={() => { onClick(); onProject() }}
+      onClick={handleClick}
       className={cn(
         'group flex items-start gap-2 p-2.5 rounded-xl border cursor-pointer transition-all',
         isActive
           ? 'bg-brand-50 dark:bg-brand-950/30 border-brand-300 dark:border-brand-800'
           : 'bg-white dark:bg-dark-surface border-surface-muted dark:border-dark-border hover:border-brand-200 dark:hover:border-brand-900',
       )}
-      title="Clic: proyectar"
+      title={projectionClickMode === 'single' ? 'Clic: proyectar' : 'Doble clic: proyectar'}
     >
       <SectionBadge type={section.type} className="mt-0.5" />
       <div className="flex-1 min-w-0">
@@ -485,9 +503,10 @@ function SongEditor({ song, onSave, onCancel }) {
 
 // ─── Proyector de canción ─────────────────────────────────────────────────────
 function SongProjector({ song, liveBg, activeBg, onBack }) {
-  const { project } = useApp()
+  const { project, isNavNext, isNavPrev, projectionClickMode } = useApp()
   const allSections = buildAllSections(song)
   const [activeIdx, setActiveIdx] = useState(0)
+  const clickTimers = useRef({})
 
   const projectSection = useCallback((section, idx) => {
     setActiveIdx(idx)
@@ -501,6 +520,21 @@ function SongProjector({ song, liveBg, activeBg, onBack }) {
     }
   }, [song, project, liveBg])
 
+  const handleSectionClick = (section, idx) => {
+    if (projectionClickMode === 'single') {
+      projectSection(section, idx)
+      return
+    }
+    if (clickTimers.current[idx] !== undefined) {
+      clearTimeout(clickTimers.current[idx])
+      delete clickTimers.current[idx]
+      projectSection(section, idx)
+    } else {
+      setActiveIdx(idx)
+      clickTimers.current[idx] = setTimeout(() => { delete clickTimers.current[idx] }, 240)
+    }
+  }
+
   useEffect(() => {
     if (allSections.length > 0) projectSection(allSections[0], 0)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -508,9 +542,9 @@ function SongProjector({ song, liveBg, activeBg, onBack }) {
 
   useEffect(() => {
     const handler = (e) => {
-      if (!['ArrowRight','ArrowDown','ArrowLeft','ArrowUp'].includes(e.key)) return
+      if (!isNavNext(e.key) && !isNavPrev(e.key)) return
       e.preventDefault()
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      if (isNavNext(e.key)) {
         const next = Math.min(activeIdx + 1, allSections.length - 1)
         if (next !== activeIdx) projectSection(allSections[next], next)
       } else {
@@ -520,7 +554,7 @@ function SongProjector({ song, liveBg, activeBg, onBack }) {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [activeIdx, allSections, projectSection])
+  }, [activeIdx, allSections, projectSection, isNavNext, isNavPrev])
 
   const effectiveBg = activeBg ?? { type: 'gradient', value: BG_MAP[liveBg] ?? BG_MAP.dark }
   const isMedia = effectiveBg.type === 'image' || effectiveBg.type === 'gif' || effectiveBg.type === 'video'
@@ -549,7 +583,7 @@ function SongProjector({ song, liveBg, activeBg, onBack }) {
           {allSections.map((section, idx) => (
             <button
               key={idx}
-              onClick={() => projectSection(section, idx)}
+              onClick={() => handleSectionClick(section, idx)}
               className={cn(
                 'w-full text-left p-3 rounded-xl border transition-all',
                 idx === activeIdx
@@ -710,6 +744,7 @@ function SlideGridCard({ section, isActive, index, total, onSelect, onProject, e
 
 // ─── Detalle de canción ───────────────────────────────────────────────────────
 function SongDetail({ song, liveBg, activeBg, onOpenProjector, onEdit, onDelete, onProjectSection, isLive, onClearLive }) {
+  const { isNavNext, isNavPrev, projectionClickMode } = useApp()
   const allSections = buildAllSections(song)
   const [activeIdx, setActiveIdx] = useState(0)
   const [detailView, setDetailView] = useState('list')
@@ -749,10 +784,10 @@ function SongDetail({ song, liveBg, activeBg, onOpenProjector, onEdit, onDelete,
   useEffect(() => {
     const handler = (e) => {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      if (isNavNext(e.key)) {
         e.preventDefault()
         goNext()
-      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      } else if (isNavPrev(e.key)) {
         e.preventDefault()
         goPrev()
       } else if (e.key === 'Home') {
@@ -769,7 +804,7 @@ function SongDetail({ song, liveBg, activeBg, onOpenProjector, onEdit, onDelete,
 
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [goNext, goPrev, allSections, handleProjectSection])
+  }, [goNext, goPrev, allSections, handleProjectSection, isNavNext, isNavPrev])
 
   return (
     <div className="flex flex-col gap-3 h-full overflow-hidden">
@@ -871,7 +906,7 @@ function SongDetail({ song, liveBg, activeBg, onOpenProjector, onEdit, onDelete,
           <div className="w-56 flex-shrink-0 overflow-y-auto space-y-1.5">
             <SectionLabel className="mb-2">
               Secciones ({allSections.length})
-              <span className="ml-1 text-slate-300 dark:text-slate-700 font-normal normal-case tracking-normal">· clic proyecta</span>
+              <span className="ml-1 text-slate-300 dark:text-slate-700 font-normal normal-case tracking-normal">· {projectionClickMode === 'single' ? 'clic proyecta' : 'doble clic proyecta'}</span>
             </SectionLabel>
 
             {allSections.map((section, idx) => (
@@ -1206,7 +1241,7 @@ function SongListItem({
 }
 
 export function SongsPage() {
-  const { project, liveBg, activeBg, isLive, clearProjection, refreshLibrary } = useApp()
+  const { project, liveBg, activeBg, isLive, clearProjection, refreshLibrary, isNavNext, isNavPrev } = useApp()
 
   const [songs, setSongs] = useState([])
   const [loading, setLoading] = useState(true)

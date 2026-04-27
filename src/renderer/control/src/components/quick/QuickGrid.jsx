@@ -1,9 +1,29 @@
+import { useRef, useState } from 'react'
 import { useApp } from '../../context/AppContext.jsx'
 import { SectionLabel } from '@shared/components/ui/index.jsx'
+import { cn } from '@shared/utils/cn.js'
 
 export function QuickGrid() {
-  const { library, project, liveBg } = useApp()
+  const { library, project, liveBg, projectionClickMode } = useApp()
+  const [selectedId, setSelectedId] = useState(null)
+  const clickTimers = useRef({})
   const items = library.slice(0, 6)
+
+  const handleClick = (item) => {
+    if (projectionClickMode === 'single') {
+      setSelectedId(item.id)
+      project(item.content, liveBg)
+      return
+    }
+    if (clickTimers.current[item.id] !== undefined) {
+      clearTimeout(clickTimers.current[item.id])
+      delete clickTimers.current[item.id]
+      project(item.content, liveBg)
+    } else {
+      setSelectedId(item.id)
+      clickTimers.current[item.id] = setTimeout(() => { delete clickTimers.current[item.id] }, 240)
+    }
+  }
 
   if (items.length === 0) return null
 
@@ -14,8 +34,8 @@ export function QuickGrid() {
         {items.map(item => (
           <button
             key={item.id}
-            className="quick-card"
-            onClick={() => project(item.content, liveBg)}
+            className={cn('quick-card', selectedId === item.id && 'ring-2 ring-brand-500')}
+            onClick={() => handleClick(item)}
           >
             <p className="text-[12px] font-bold text-slate-800 dark:text-slate-200 truncate mb-0.5">
               {item.title}

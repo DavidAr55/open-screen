@@ -2,18 +2,69 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 
 const AppContext = createContext(null)
 
+const FONT_MAP = {
+  jakarta: "'Plus Jakarta Sans', sans-serif",
+  inter:   "'Inter', sans-serif",
+  system:  "system-ui, -apple-system, sans-serif",
+}
+
 export function AppProvider({ children }) {
   // ── Navegación ──────────────────────────────────────────────────────────
   const [activePage, setActivePage] = useState('Control')
 
-  // ── Tema ────────────────────────────────────────────────────────
+  // ── Apariencia ────────────────────────────────────────────────────────────
   const [theme, setThemeState] = useState('light') // 'light' | 'dark'
+  const [fontFamily, setFontFamilyState] = useState('jakarta')
+  const [animationSpeed, setAnimationSpeedState] = useState('normal')
 
   const setTheme = useCallback(async (value) => {
     setThemeState(value)
     document.documentElement.classList.toggle('dark', value === 'dark')
     await window.api?.settings.set('theme', value)
   }, [])
+
+  const setFontFamily = useCallback(async (val) => {
+    setFontFamilyState(val)
+    document.body.style.fontFamily = FONT_MAP[val] ?? FONT_MAP.jakarta
+    await window.api?.settings.set('font_family', val)
+  }, [])
+
+  const setAnimationSpeed = useCallback(async (val) => {
+    setAnimationSpeedState(val)
+    document.documentElement.classList.remove('anim-slow', 'anim-fast')
+    if (val === 'slow') document.documentElement.classList.add('anim-slow')
+    if (val === 'fast') document.documentElement.classList.add('anim-fast')
+    await window.api?.settings.set('animation_speed', val)
+  }, [])
+
+  // ── Interacción ──────────────────────────────────────────────────────────
+  const [projectionClickMode, setProjClickModeState] = useState('double')
+  const [keyNavNext,    setKeyNavNextState]    = useState('ArrowRight')
+  const [keyNavPrev,    setKeyNavPrevState]    = useState('ArrowLeft')
+  const [keyProjToggle, setKeyProjToggleState] = useState('F12')
+
+  const setProjClickMode = useCallback(async (val) => {
+    setProjClickModeState(val)
+    await window.api?.settings.set('projection_click_mode', val)
+  }, [])
+
+  const setKeyNavNext = useCallback(async (val) => {
+    setKeyNavNextState(val)
+    await window.api?.settings.set('key_nav_next', val)
+  }, [])
+
+  const setKeyNavPrev = useCallback(async (val) => {
+    setKeyNavPrevState(val)
+    await window.api?.settings.set('key_nav_prev', val)
+  }, [])
+
+  const setKeyProjToggle = useCallback(async (val) => {
+    setKeyProjToggleState(val)
+    await window.api?.settings.set('key_proj_toggle', val)
+  }, [])
+
+  const isNavNext = useCallback((key) => key === keyNavNext, [keyNavNext])
+  const isNavPrev = useCallback((key) => key === keyNavPrev, [keyNavPrev])
 
   // ── Biblioteca ──────────────────────────────────────────────────
   const [library, setLibrary]   = useState([])
@@ -103,6 +154,24 @@ export function AppProvider({ children }) {
       setThemeState(savedTheme)
       document.documentElement.classList.toggle('dark', savedTheme === 'dark')
 
+      // Aplicar fuente guardada
+      const savedFont = settings.font_family ?? 'jakarta'
+      setFontFamilyState(savedFont)
+      document.body.style.fontFamily = FONT_MAP[savedFont] ?? FONT_MAP.jakarta
+
+      // Aplicar velocidad de animación guardada
+      const savedSpeed = settings.animation_speed ?? 'normal'
+      setAnimationSpeedState(savedSpeed)
+      document.documentElement.classList.remove('anim-slow', 'anim-fast')
+      if (savedSpeed === 'slow') document.documentElement.classList.add('anim-slow')
+      if (savedSpeed === 'fast') document.documentElement.classList.add('anim-fast')
+
+      // Cargar ajustes de interacción
+      setProjClickModeState(settings.projection_click_mode ?? 'double')
+      setKeyNavNextState(settings.key_nav_next ?? 'ArrowRight')
+      setKeyNavPrevState(settings.key_nav_prev ?? 'ArrowLeft')
+      setKeyProjToggleState(settings.key_proj_toggle ?? 'F12')
+
       // Cargar biblioteca
       await refreshLibrary()
 
@@ -113,12 +182,31 @@ export function AppProvider({ children }) {
     init()
   }, [refreshLibrary])
 
+  // ── Atajo global: toggle proyección ──────────────────────────────────────
+  useEffect(() => {
+    const handler = (e) => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return
+      if (e.key !== keyProjToggle) return
+      e.preventDefault()
+      if (isLive) clearProjection()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [keyProjToggle, isLive, clearProjection])
+
   return (
     <AppContext.Provider value={{
       // Navegación
       activePage, setActivePage,
-      // Tema
+      // Apariencia
       theme, setTheme,
+      fontFamily, setFontFamily,
+      animationSpeed, setAnimationSpeed,
+      // Interacción
+      projectionClickMode, setProjClickMode,
+      keyNavNext, setKeyNavNext, keyNavPrev, setKeyNavPrev,
+      keyProjToggle, setKeyProjToggle,
+      isNavNext, isNavPrev,
       // Biblioteca
       library, libLoading, refreshLibrary, createItem, deleteItem, deleteMany,
       // Proyección

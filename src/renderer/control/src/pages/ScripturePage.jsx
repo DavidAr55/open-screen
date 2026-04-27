@@ -126,21 +126,24 @@ function Highlight({ text, query }) {
 
 // ─── Componente de versículo con todos los eventos ────────────────────────────
 function VerseItem({ verse, isSelected, onSelect, onProject, onSave, searchQuery }) {
+  const { projectionClickMode } = useApp()
   const clickTimer  = useRef(null)
   const [ctx, setCtx] = useState(null)
 
   const handleClick = (e) => {
     e.preventDefault()
-    // Detectar doble clic manualmente para evitar conflicto con single
+    if (projectionClickMode === 'single') {
+      onProject(verse)
+      return
+    }
     if (clickTimer.current) {
-      // Doble clic → proyectar directamente
       clearTimeout(clickTimer.current)
       clickTimer.current = null
       onProject(verse)
     } else {
       clickTimer.current = setTimeout(() => {
         clickTimer.current = null
-        onSelect(verse) // Clic simple → seleccionar
+        onSelect(verse)
       }, 220)
     }
   }
@@ -196,7 +199,7 @@ function VerseItem({ verse, isSelected, onSelect, onProject, onSave, searchQuery
 
 // ─── Página principal ─────────────────────────────────────────────────────────
 export function ScripturePage() {
-  const { project, liveBg, activeBg, createItem, refreshLibrary } = useApp()
+  const { project, liveBg, activeBg, createItem, refreshLibrary, isNavNext, isNavPrev } = useApp()
 
   const [mode,     setMode]     = useState('navigate')
   const [modules,  setModules]  = useState([])
@@ -337,8 +340,8 @@ export function ScripturePage() {
       if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return
 
       if (mode === 'navigate') {
-        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); goNext() }
-        if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   { e.preventDefault(); goPrev() }
+        if (isNavNext(e.key)) { e.preventDefault(); goNext() }
+        if (isNavPrev(e.key)) { e.preventDefault(); goPrev() }
         if (e.key === 'Enter') { e.preventDefault(); projectVerse(selectedVerse) }
         if (e.key === 'Home' && verses.length > 0) {
           e.preventDefault(); goToVerse(verses[0])
@@ -349,8 +352,8 @@ export function ScripturePage() {
       }
 
       if (mode === 'search' && searchResults.length > 0) {
-        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); goSearchNext() }
-        if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   { e.preventDefault(); goSearchPrev() }
+        if (isNavNext(e.key)) { e.preventDefault(); goSearchNext() }
+        if (isNavPrev(e.key)) { e.preventDefault(); goSearchPrev() }
         if (e.key === 'Enter') { e.preventDefault(); projectVerse(selectedVerse) }
         if (e.key === 'Home') {
           e.preventDefault(); goToVerse(searchResults[0])
@@ -363,7 +366,7 @@ export function ScripturePage() {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [selectedVerse, mode, goNext, goPrev, projectVerse, verses, goToVerse,
-      searchResults, goSearchNext, goSearchPrev])
+      searchResults, goSearchNext, goSearchPrev, isNavNext, isNavPrev])
 
   // ─────────────────────────────────────────────────────────────────────────────
   if (!loading && modules.length === 0) {

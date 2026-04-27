@@ -17,6 +17,10 @@
     -webkit-font-smoothing: antialiased;
   }
 
+  /* Velocidad de animaciones */
+  html.anim-slow * { transition-duration: 450ms; }
+  html.anim-fast * { transition-duration: 75ms;  }
+
   /* Scrollbar minimalista */
   ::-webkit-scrollbar         { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track   { background: transparent; }
