@@ -3,12 +3,15 @@ import { useApp } from '../../context/AppContext.jsx'
 import { Button, LiveBadge } from '@shared/components/ui/index.jsx'
 import { cn } from '@shared/utils/cn.js'
 import { BackgroundsPanel } from '../backgound/BackgroundsPanel.jsx'
+import { Timer } from './Timer.jsx'
+import { GlobalSearch } from './GlobalSearch.jsx'
 
 const SunIcon  = () => <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
 const MoonIcon = () => <svg width="12" height="12" fill="currentColor" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+const PowerIcon = () => <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M12 2v10"/><path d="M18.36 6.64a9 9 0 1 1-12.73 0"/></svg>
 
 export function Topbar() {
-  const { theme, setTheme, isLive, clearProjection, displays, activeBg } = useApp()
+  const { theme, setTheme, isLive, liveText, toggleProjection, displays, activeBg } = useApp()
   const [showBgPanel, setShowBgPanel] = useState(false)
   const isDark = theme === 'dark'
 
@@ -20,6 +23,9 @@ export function Topbar() {
     if (activeBg.type === 'color' || activeBg.type === 'gradient' || activeBg.type === 'css') return { background: activeBg.value }
     if ((activeBg.type === 'image' || activeBg.type === 'gif') && (activeBg.thumbnail || activeBg.value)) {
       return { backgroundImage: `url(${activeBg.thumbnail || activeBg.value})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    }
+    if (activeBg.type === 'video' && activeBg.thumbnail) {
+      return { backgroundImage: `url(${activeBg.thumbnail})`, backgroundSize: 'cover', backgroundPosition: 'center' }
     }
     return { background: '#111' }
   })()
@@ -45,7 +51,8 @@ export function Topbar() {
           <span className="font-extrabold text-[15px] tracking-tight text-slate-900 dark:text-white">Open Screen</span>
         </div>
 
-        <h1 className="font-bold text-base text-slate-700 dark:text-slate-300">Panel de control</h1>
+        {/* Buscador global (Ctrl+K) */}
+        <GlobalSearch />
 
         <div className="ml-auto flex items-center gap-3">
           {/* Monitor badge */}
@@ -88,13 +95,19 @@ export function Topbar() {
             <span className="text-slate-300 dark:text-slate-600"><MoonIcon /></span>
           </div>
 
+          <Timer />
+
           <LiveBadge live={isLive} />
 
-          <Button variant="danger" size="sm" onClick={clearProjection}>
-            <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-              <rect x="3" y="3" width="18" height="18" rx="3"/>
-            </svg>
-            Limpiar pantalla
+          <Button
+            variant={isLive ? 'danger' : 'secondary'}
+            size="sm"
+            onClick={toggleProjection}
+            disabled={!isLive && !liveText}
+            title={isLive ? 'Apagar proyección' : 'Reanudar proyección'}
+          >
+            <PowerIcon />
+            {isLive ? 'Apagar' : 'Reanudar'}
           </Button>
         </div>
       </header>
