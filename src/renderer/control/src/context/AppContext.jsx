@@ -1,4 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { DEFAULT_BG } from '@shared/constants/defaultBackground.js'
+import { DEFAULT_PROJECTION_FONT } from '@shared/utils/font.js'
+import { DEFAULT_WATERMARK } from '@shared/constants/watermark.js'
 
 const AppContext = createContext(null)
 
@@ -11,6 +14,18 @@ const FONT_MAP = {
 export function AppProvider({ children }) {
   // ── Navegación ──────────────────────────────────────────────────────────
   const [activePage, setActivePage] = useState('Control')
+
+  // Deep-link del buscador global: {type, payload, ts}. Cada página lo
+  // consume en un useEffect y lo limpia; `ts` permite re-seleccionar el
+  // mismo ítem dos veces seguidas.
+  const [pendingSelection, setPendingSelection] = useState(null)
+
+  const navigateTo = useCallback((page, selection) => {
+    setActivePage(page)
+    if (selection) setPendingSelection({ ...selection, ts: Date.now() })
+  }, [])
+
+  const clearPendingSelection = useCallback(() => setPendingSelection(null), [])
 
   // ── Apariencia ────────────────────────────────────────────────────────────
   const [theme, setThemeState] = useState('light') // 'light' | 'dark'
@@ -66,6 +81,65 @@ export function AppProvider({ children }) {
   const isNavNext = useCallback((key) => key === keyNavNext, [keyNavNext])
   const isNavPrev = useCallback((key) => key === keyNavPrev, [keyNavPrev])
 
+  // ── Proyección: monitor, fondo/fuente predeterminados, auto-hide ──────────
+  const [activeMonitor,     setActiveMonitorState]     = useState('secondary')
+  const [projFontSize,      setProjFontSizeState]      = useState('auto')
+  const [projectionFontFamily, setProjectionFontFamilyState] = useState(DEFAULT_PROJECTION_FONT)
+  const [autoHideControls,  setAutoHideControlsState]  = useState(false)
+
+  const setActiveMonitor = useCallback(async (val) => {
+    setActiveMonitorState(val)
+    await window.api?.settings.set('active_monitor', val)
+    await window.api?.displays.setActiveMonitor(val)
+  }, [])
+
+  const setProjFontSize = useCallback(async (val) => {
+    setProjFontSizeState(val)
+    window.api?.projection.setFontSize(val)
+    await window.api?.settings.set('font_size', val)
+  }, [])
+
+  const setProjectionFontFamily = useCallback(async (val) => {
+    setProjectionFontFamilyState(val)
+    window.api?.projection.setFont(val)
+    await window.api?.settings.set('projection_font_family', val)
+  }, [])
+
+  const setAutoHideControls = useCallback(async (val) => {
+    setAutoHideControlsState(val)
+    await window.api?.settings.set('auto_hide_controls', val)
+  }, [])
+
+  // ── Marca de agua ──────────────────────────────────────────────────────────
+  const [watermark, setWatermarkState] = useState(DEFAULT_WATERMARK)
+
+  const setWatermark = useCallback(async (patch) => {
+    const next = { ...watermark, ...patch }
+    setWatermarkState(next)
+    window.api?.projection.setWatermark(next)
+    await window.api?.settings.setMany({
+      watermark_enabled:  String(next.enabled),
+      watermark_image:    next.image ?? '',
+      watermark_position: next.position,
+      watermark_opacity:  next.opacity,
+      watermark_margin:   next.margin,
+    })
+  }, [watermark])
+
+  // ── Biblia: versión y formato predeterminados ──────────────────────────────
+  const [defaultBibleModule, setDefaultBibleModuleState] = useState(null)
+  const [showVerseNumbers,   setShowVerseNumbersState]   = useState(true)
+
+  const setDefaultBibleModule = useCallback(async (val) => {
+    setDefaultBibleModuleState(val)
+    await window.api?.settings.set('default_bible_module', val)
+  }, [])
+
+  const setShowVerseNumbers = useCallback(async (val) => {
+    setShowVerseNumbersState(val)
+    await window.api?.settings.set('show_verse_numbers', val)
+  }, [])
+
   // ── Biblioteca ──────────────────────────────────────────────────
   const [library, setLibrary]   = useState([])
   const [libLoading, setLibLoading] = useState(true)
@@ -99,46 +173,52 @@ export function AppProvider({ children }) {
   // ── Estado live (proyección) ────────────────────────────────────
   const [liveText,    setLiveText]    = useState('')
   const [isLive,      setIsLive]      = useState(false)
-  const [liveBg,      setLiveBg]      = useState('dark')
-  // Fondo activo extendido — objeto {type, value, id?, name?}
-  // null = usar liveBg (preset legacy)
+  // Vista previa de "lo próximo" — la llena la página activa (Escrituras/Canciones/Presentaciones)
+  // para que el panel de Escenario pueda mostrarla. Puramente transitorio, no se persiste.
+  const [nextText,    setNextText]    = useState('')
+  // Fondo activo — objeto {type, value, id?, name?}, elegido en el editor de fondos (Topbar → "Fondo").
+  // null solo hasta que se resuelve el fondo predeterminado guardado en Ajustes.
   const [activeBg,    setActiveBgState] = useState(null)
   const [projCount,   setProjCount]   = useState(0)
+  // Último payload enviado a proyección — permite "reencender" tras apagar sin perder el contenido
+  const [lastPayload, setLastPayload] = useState(null)
 
   const setActiveBg = useCallback((bg) => {
     setActiveBgState(bg)
     // Notificar inmediatamente a la ventana de proyección
     if (bg) window.api?.backgrounds?.setActive(bg)
+    // Recordarlo como fondo predeterminado para el próximo inicio (único lugar desde donde se cambia: botón «Fondo»)
+    if (bg?.id) window.api?.settings.set('default_background_id', bg.id)
   }, [])
 
-  // Obtener el bg que se debe enviar en cada proyección
-  // Si hay un activeBg personalizado, usarlo; si no, usar liveBg (preset)
-  const currentBgPayload = useCallback(() => {
-    if (activeBg) return activeBg
-    // Convertir preset string a objeto
-    const BG_VALUES = {
-      dark:  'radial-gradient(ellipse at 50% 35%, #1c0a0a, #000)',
-      red:   'radial-gradient(ellipse at 50% 30%, #4a0808, #1a0000)',
-      black: '#000000',
-    }
-    return { type: 'gradient', value: BG_VALUES[liveBg] ?? BG_VALUES.dark }
-  }, [activeBg, liveBg])
-
-  const project = useCallback((text, _legacyBg) => {
-    // _legacyBg se ignora si hay un activeBg seleccionado en el panel
-    const bgPayload = currentBgPayload()
-    const payload = { text, bg: bgPayload }
+  const project = useCallback((text) => {
+    const payload = { text, bg: activeBg ?? DEFAULT_BG, fontSize: projFontSize, fontFamily: projectionFontFamily, watermark }
     window.api?.projection.send(payload)
     setLiveText(text)
+    setLastPayload(payload)
     setIsLive(true)
     setProjCount(c => c + 1)
-  }, [currentBgPayload])
+  }, [activeBg, projFontSize, projectionFontFamily, watermark])
 
   const clearProjection = useCallback(() => {
     window.api?.projection.clear()
     setIsLive(false)
     setLiveText('')
+    setLastPayload(null)
   }, [])
+
+  // Switch encendido/apagado: apaga sin perder el contenido, reenciende reenviando el último payload
+  const toggleProjection = useCallback(() => {
+    if (isLive) {
+      window.api?.projection.clear()
+      setIsLive(false)
+      return
+    }
+    if (!lastPayload) return
+    window.api?.projection.send(lastPayload)
+    setIsLive(true)
+    setProjCount(c => c + 1)
+  }, [isLive, lastPayload])
 
   // ── Monitores ───────────────────────────────────────────────────
   const [displays, setDisplays] = useState([])
@@ -172,6 +252,37 @@ export function AppProvider({ children }) {
       setKeyNavPrevState(settings.key_nav_prev ?? 'ArrowLeft')
       setKeyProjToggleState(settings.key_proj_toggle ?? 'F12')
 
+      // Cargar ajustes de proyección
+      setProjFontSizeState(settings.font_size ?? 'auto')
+      setProjectionFontFamilyState(settings.projection_font_family ?? DEFAULT_PROJECTION_FONT)
+      setActiveMonitorState(settings.active_monitor ?? 'secondary')
+      setAutoHideControlsState(settings.auto_hide_controls === 'true')
+
+      // Cargar el fondo predeterminado — se envía a proyección de inmediato, no solo al proyectar
+      if (settings.default_background_id) {
+        const bg = await window.api?.backgrounds.findById(Number(settings.default_background_id))
+        if (bg) {
+          const loadedBg = { type: bg.type, value: bg.value, id: bg.id, name: bg.name, thumbnail: bg.thumbnail ?? null }
+          setActiveBgState(loadedBg)
+          window.api?.backgrounds?.setActive(loadedBg)
+        }
+      }
+
+      // Cargar ajustes de Biblia
+      setDefaultBibleModuleState(settings.default_bible_module ?? null)
+      setShowVerseNumbersState(settings.show_verse_numbers !== 'false')
+
+      // Cargar marca de agua — se envía a proyección de inmediato, no solo al proyectar
+      const loadedWatermark = {
+        enabled:  settings.watermark_enabled === 'true',
+        image:    settings.watermark_image || null,
+        position: settings.watermark_position || DEFAULT_WATERMARK.position,
+        opacity:  settings.watermark_opacity || DEFAULT_WATERMARK.opacity,
+        margin:   settings.watermark_margin || DEFAULT_WATERMARK.margin,
+      }
+      setWatermarkState(loadedWatermark)
+      window.api?.projection.setWatermark(loadedWatermark)
+
       // Cargar biblioteca
       await refreshLibrary()
 
@@ -188,16 +299,17 @@ export function AppProvider({ children }) {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return
       if (e.key !== keyProjToggle) return
       e.preventDefault()
-      if (isLive) clearProjection()
+      toggleProjection()
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [keyProjToggle, isLive, clearProjection])
+  }, [keyProjToggle, toggleProjection])
 
   return (
     <AppContext.Provider value={{
       // Navegación
       activePage, setActivePage,
+      pendingSelection, navigateTo, clearPendingSelection,
       // Apariencia
       theme, setTheme,
       fontFamily, setFontFamily,
@@ -207,10 +319,18 @@ export function AppProvider({ children }) {
       keyNavNext, setKeyNavNext, keyNavPrev, setKeyNavPrev,
       keyProjToggle, setKeyProjToggle,
       isNavNext, isNavPrev,
+      activeMonitor, setActiveMonitor,
+      projFontSize, setProjFontSize,
+      projectionFontFamily, setProjectionFontFamily,
+      autoHideControls, setAutoHideControls,
+      watermark, setWatermark,
+      defaultBibleModule, setDefaultBibleModule,
+      showVerseNumbers, setShowVerseNumbers,
       // Biblioteca
       library, libLoading, refreshLibrary, createItem, deleteItem, deleteMany,
       // Proyección
-      liveText, isLive, liveBg, setLiveBg, activeBg, setActiveBg, projCount, project, clearProjection,
+      liveText, isLive, activeBg, setActiveBg, projCount, project, clearProjection, toggleProjection,
+      nextText, setNextText,
       // Monitores
       displays,
     }}>
