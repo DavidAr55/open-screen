@@ -9,6 +9,10 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "postinstall": "npx @electron/rebuild -f -w better-sqlite3",
+    "dist": "electron-vite build && electron-builder",
+    "dist:win": "electron-vite build && electron-builder --win",
+    "dist:mac": "electron-vite build && electron-builder --mac",
+    "dist:linux": "electron-vite build && electron-builder --linux",
     "bible:validate": "node tools/import-bible.js validate",
     "bible:import": "node tools/import-bible.js import",
     "bible:info": "node tools/import-bible.js info"
@@ -19,12 +23,13 @@
     "electron",
     "open-source"
   ],
-  "author": "",
+  "author": "DavidAr55",
   "license": "MIT",
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.0",
     "autoprefixer": "^10.4.20",
     "electron": "^33.0.0",
+    "electron-builder": "^26.15.3",
     "electron-rebuild": "^3.2.9",
     "electron-vite": "^2.3.0",
     "png-to-ico": "^3.0.1",
@@ -35,8 +40,58 @@
   },
   "dependencies": {
     "better-sqlite3": "^11.5.0",
+    "fast-xml-parser": "^5.9.3",
+    "font-list": "^2.1.0",
+    "jszip": "^3.10.1",
+    "pdfjs-dist": "^4.4.168",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "pdfjs-dist": "^4.4.168"
+    "react-dom": "^19.0.0"
+  },
+  "build": {
+    "appId": "com.davidar55.openscreen",
+    "productName": "Open Screen",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "out/**/*",
+      "package.json",
+      "!**/*.map"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/icon.png",
+        "to": "icon.png"
+      }
+    ],
+    "asarUnpack": [
+      "**/*.node"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "resources/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "icon": "resources/icon.png",
+      "category": "public.app-category.utilities"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "icon": "resources/icon.png",
+      "category": "AudioVideo"
+    }
   }
 }
