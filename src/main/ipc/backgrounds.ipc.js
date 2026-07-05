@@ -133,7 +133,10 @@ export function registerBackgroundsIPC(bgRepo, windowManager, bgServerPort) {
       } catch {}
     }
 
-    return { name, type, filePath: src, filename: basename(src), previewSrc }
+    // Preview de video: URL http servida por el servidor local (el archivo aún no se copió)
+    const previewUrl = type === 'video' ? toHttpUrl(src, bgServerPort) : null
+
+    return { name, type, filePath: src, filename: basename(src), previewSrc, previewUrl }
   })
 
   // Paso 2: Confirmar e importar el archivo seleccionado

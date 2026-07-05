@@ -32,6 +32,8 @@ const UploadIcon  = () => <svg width="14" height="14" fill="none" viewBox="0 0 2
 const PlusIcon    = () => <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
 const CheckIcon   = () => <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
 const XIcon       = () => <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+const ColorSwatchIcon = () => <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18 4.5 4.5 0 0 0 0-9 2.5 2.5 0 0 1 0-5" fill="currentColor" stroke="none"/></svg>
+const GradientIcon    = () => <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><defs><linearGradient id="gIcon" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="currentColor" stopOpacity="1"/><stop offset="1" stopColor="currentColor" stopOpacity="0.15"/></linearGradient></defs><rect x="3" y="3" width="18" height="18" rx="5" fill="url(#gIcon)"/></svg>
 
 // ─── Preview miniatura de un fondo ────────────────────────────────────────────
 function BgPreview({ bg, size = 'md', className }) {
@@ -136,29 +138,34 @@ function ColorEditor({ onSave }) {
   const [name,  setName]  = useState('')
   const [color, setColor] = useState('#1a0a0a')
   return (
-    <div className="space-y-3">
-      <div>
-        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Nombre</label>
-        <input value={name} onChange={e => setName(e.target.value)} placeholder="Mi color"
-          className="w-full px-3 py-2 text-[13px] rounded-lg bg-surface-soft dark:bg-dark-card border border-surface-muted dark:border-dark-border outline-none focus:border-brand-500 text-slate-900 dark:text-slate-100" />
-      </div>
-      <div>
-        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Color</label>
-        <div className="flex gap-3 items-center">
-          <input type="color" value={color} onChange={e => setColor(e.target.value)}
-            className="w-12 h-12 rounded-xl cursor-pointer border-0 outline-none bg-transparent" />
-          <input value={color} onChange={e => setColor(e.target.value)} placeholder="#000000"
-            className="flex-1 px-3 py-2 text-[13px] font-mono rounded-lg bg-surface-soft dark:bg-dark-card border border-surface-muted dark:border-dark-border outline-none focus:border-brand-500 text-slate-900 dark:text-slate-100" />
+    <div className="flex gap-4">
+      <div className="flex-1 space-y-3">
+        <div>
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Nombre</label>
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="Mi color"
+            className="w-full px-3 py-2 text-[13px] rounded-lg bg-surface-soft dark:bg-dark-card border border-surface-muted dark:border-dark-border outline-none focus:border-brand-500 text-slate-900 dark:text-slate-100" />
         </div>
+        <div>
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Color</label>
+          <div className="flex gap-3 items-center">
+            <input type="color" value={color} onChange={e => setColor(e.target.value)}
+              className="w-12 h-12 rounded-xl cursor-pointer border-0 outline-none bg-transparent" />
+            <input value={color} onChange={e => setColor(e.target.value)} placeholder="#000000"
+              className="flex-1 px-3 py-2 text-[13px] font-mono rounded-lg bg-surface-soft dark:bg-dark-card border border-surface-muted dark:border-dark-border outline-none focus:border-brand-500 text-slate-900 dark:text-slate-100" />
+          </div>
+        </div>
+        <button
+          disabled={!name.trim()}
+          onClick={() => onSave({ name: name.trim(), type: 'color', value: color })}
+          className="w-full py-2 rounded-xl text-[13px] font-bold text-white bg-brand-600 hover:bg-brand-700 disabled:opacity-40 transition-all"
+        >
+          Guardar color
+        </button>
       </div>
-      <div className="rounded-xl overflow-hidden" style={{ height: 64, background: color }} />
-      <button
-        disabled={!name.trim()}
-        onClick={() => onSave({ name: name.trim(), type: 'color', value: color })}
-        className="w-full py-2 rounded-xl text-[13px] font-bold text-white bg-brand-600 hover:bg-brand-700 disabled:opacity-40 transition-all"
-      >
-        Guardar color
-      </button>
+      <div className="flex-1">
+        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Vista previa</label>
+        <div className="rounded-xl overflow-hidden" style={{ height: 128, background: color }} />
+      </div>
     </div>
   )
 }
@@ -180,88 +187,121 @@ function GradientEditor({ onSave }) {
       : `radial-gradient(ellipse at 50% 35%, ${color1}, ${color2})`
 
   return (
-    <div className="space-y-3">
-      <div>
-        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Nombre</label>
-        <input value={name} onChange={e => setName(e.target.value)} placeholder="Mi gradiente"
-          className="w-full px-3 py-2 text-[13px] rounded-lg bg-surface-soft dark:bg-dark-card border border-surface-muted dark:border-dark-border outline-none focus:border-brand-500 text-slate-900 dark:text-slate-100" />
-      </div>
+    <div className="flex gap-4">
+      <div className="flex-1 space-y-3">
+        <div>
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Nombre</label>
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="Mi gradiente"
+            className="w-full px-3 py-2 text-[13px] rounded-lg bg-surface-soft dark:bg-dark-card border border-surface-muted dark:border-dark-border outline-none focus:border-brand-500 text-slate-900 dark:text-slate-100" />
+        </div>
 
-      <div className="flex gap-1 p-1 rounded-lg bg-surface-soft dark:bg-dark-card">
-        {['linear-gradient','radial-gradient'].map(t => (
-          <button key={t} onClick={() => setType(t)}
-            className={cn('flex-1 py-1 rounded-md text-[11px] font-semibold transition-all',
-              type === t ? 'bg-white dark:bg-dark-surface text-slate-900 dark:text-white shadow-sm' : 'text-slate-400')}>
-            {t === 'linear-gradient' ? 'Lineal' : 'Radial'}
-          </button>
-        ))}
-      </div>
-
-      {!useCustom && (
-        <>
-          {type === 'linear-gradient' && (
-            <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Ángulo: {angle}°</label>
-              <input type="range" min="0" max="360" value={angle} onChange={e => setAngle(+e.target.value)} className="w-full" />
-            </div>
-          )}
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Color 1</label>
-              <div className="flex gap-2 items-center">
-                <input type="color" value={color1} onChange={e => setColor1(e.target.value)} className="w-10 h-10 rounded-lg cursor-pointer border-0 bg-transparent" />
-                <input value={color1} onChange={e => setColor1(e.target.value)} className="flex-1 px-2 py-1.5 text-[12px] font-mono rounded-lg bg-surface-soft dark:bg-dark-card border border-surface-muted dark:border-dark-border outline-none focus:border-brand-500 text-slate-900 dark:text-slate-100" />
-              </div>
-            </div>
-            <div className="flex-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Color 2</label>
-              <div className="flex gap-2 items-center">
-                <input type="color" value={color2} onChange={e => setColor2(e.target.value)} className="w-10 h-10 rounded-lg cursor-pointer border-0 bg-transparent" />
-                <input value={color2} onChange={e => setColor2(e.target.value)} className="flex-1 px-2 py-1.5 text-[12px] font-mono rounded-lg bg-surface-soft dark:bg-dark-card border border-surface-muted dark:border-dark-border outline-none focus:border-brand-500 text-slate-900 dark:text-slate-100" />
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
-      <button onClick={() => setUseCustom(v => !v)}
-        className="text-[11px] text-brand-500 hover:text-brand-600 font-semibold">
-        {useCustom ? '← Usar editor visual' : 'Usar CSS personalizado →'}
-      </button>
-
-      {useCustom && (
-        <textarea value={custom} onChange={e => setCustom(e.target.value)}
-          placeholder="linear-gradient(135deg, #111 0%, #000 100%)"
-          rows={2}
-          className="w-full px-3 py-2 text-[12px] font-mono rounded-lg bg-surface-soft dark:bg-dark-card border border-surface-muted dark:border-dark-border outline-none focus:border-brand-500 text-slate-900 dark:text-slate-100 resize-none" />
-      )}
-
-      {/* Presets */}
-      <div>
-        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Presets rápidos</label>
-        <div className="grid grid-cols-3 gap-1.5">
-          {GRADIENT_PRESETS.map(p => (
-            <button key={p.name} onClick={() => { setUseCustom(false); /* parse not needed */ setCustom(p.value); setUseCustom(true); setName(p.name) }}
-              className="rounded-lg overflow-hidden border-2 border-transparent hover:border-brand-400 transition-all"
-              title={p.name}>
-              <div style={{ height: 36, background: p.value }} />
-              <div className="text-[9px] text-center py-0.5 bg-surface-soft dark:bg-dark-card text-slate-500 truncate px-1">{p.name}</div>
+        <div className="flex gap-1 p-1 rounded-lg bg-surface-soft dark:bg-dark-card">
+          {['linear-gradient','radial-gradient'].map(t => (
+            <button key={t} onClick={() => setType(t)}
+              className={cn('flex-1 py-1 rounded-md text-[11px] font-semibold transition-all',
+                type === t ? 'bg-white dark:bg-dark-surface text-slate-900 dark:text-white shadow-sm' : 'text-slate-400')}>
+              {t === 'linear-gradient' ? 'Lineal' : 'Radial'}
             </button>
           ))}
         </div>
+
+        {!useCustom && (
+          <>
+            {type === 'linear-gradient' && (
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Ángulo: {angle}°</label>
+                <input type="range" min="0" max="360" value={angle} onChange={e => setAngle(+e.target.value)} className="w-full" />
+              </div>
+            )}
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Color 1</label>
+                <div className="flex gap-2 items-center">
+                  <input type="color" value={color1} onChange={e => setColor1(e.target.value)} className="w-10 h-10 rounded-lg cursor-pointer border-0 bg-transparent" />
+                  <input value={color1} onChange={e => setColor1(e.target.value)} className="flex-1 px-2 py-1.5 text-[12px] font-mono rounded-lg bg-surface-soft dark:bg-dark-card border border-surface-muted dark:border-dark-border outline-none focus:border-brand-500 text-slate-900 dark:text-slate-100" />
+                </div>
+              </div>
+              <div className="flex-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Color 2</label>
+                <div className="flex gap-2 items-center">
+                  <input type="color" value={color2} onChange={e => setColor2(e.target.value)} className="w-10 h-10 rounded-lg cursor-pointer border-0 bg-transparent" />
+                  <input value={color2} onChange={e => setColor2(e.target.value)} className="flex-1 px-2 py-1.5 text-[12px] font-mono rounded-lg bg-surface-soft dark:bg-dark-card border border-surface-muted dark:border-dark-border outline-none focus:border-brand-500 text-slate-900 dark:text-slate-100" />
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        <button onClick={() => setUseCustom(v => !v)}
+          className="text-[11px] text-brand-500 hover:text-brand-600 font-semibold">
+          {useCustom ? '← Usar editor visual' : 'Usar CSS personalizado →'}
+        </button>
+
+        {useCustom && (
+          <textarea value={custom} onChange={e => setCustom(e.target.value)}
+            placeholder="linear-gradient(135deg, #111 0%, #000 100%)"
+            rows={2}
+            className="w-full px-3 py-2 text-[12px] font-mono rounded-lg bg-surface-soft dark:bg-dark-card border border-surface-muted dark:border-dark-border outline-none focus:border-brand-500 text-slate-900 dark:text-slate-100 resize-none" />
+        )}
+
+        <button
+          disabled={!name.trim() || !gradientCss.trim()}
+          onClick={() => onSave({ name: name.trim(), type: 'gradient', value: gradientCss })}
+          className="w-full py-2 rounded-xl text-[13px] font-bold text-white bg-brand-600 hover:bg-brand-700 disabled:opacity-40 transition-all"
+        >
+          Guardar gradiente
+        </button>
       </div>
 
-      <div className="rounded-xl overflow-hidden" style={{ height: 64, background: gradientCss }} />
+      <div className="flex-1 space-y-3">
+        <div>
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Vista previa</label>
+          <div className="rounded-xl overflow-hidden" style={{ height: 96, background: gradientCss }} />
+        </div>
 
-      <button
-        disabled={!name.trim() || !gradientCss.trim()}
-        onClick={() => onSave({ name: name.trim(), type: 'gradient', value: gradientCss })}
-        className="w-full py-2 rounded-xl text-[13px] font-bold text-white bg-brand-600 hover:bg-brand-700 disabled:opacity-40 transition-all"
-      >
-        Guardar gradiente
-      </button>
+        <div>
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Presets rápidos</label>
+          <div className="grid grid-cols-3 gap-1.5">
+            {GRADIENT_PRESETS.map(p => (
+              <button key={p.name} onClick={() => { setCustom(p.value); setUseCustom(true); setName(p.name) }}
+                className="rounded-lg overflow-hidden border-2 border-transparent hover:border-brand-400 transition-all"
+                title={p.name}>
+                <div style={{ height: 36, background: p.value }} />
+                <div className="text-[9px] text-center py-0.5 bg-surface-soft dark:bg-dark-card text-slate-500 truncate px-1">{p.name}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   )
+}
+
+// ─── Captura un frame de video a base64 (para usar como thumbnail estático) ───
+function captureVideoFrame(src) {
+  return new Promise((resolve) => {
+    const video = document.createElement('video')
+    video.muted       = true
+    video.preload     = 'auto'
+    video.crossOrigin = 'anonymous'
+    video.src         = src
+    const cleanup = () => { video.removeAttribute('src'); video.load() }
+    video.onloadeddata = () => {
+      try { video.currentTime = Math.min(0.5, (video.duration || 1) / 4) }
+      catch { resolve(null); cleanup() }
+    }
+    video.onseeked = () => {
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width  = video.videoWidth  || 320
+        canvas.height = video.videoHeight || 180
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height)
+        resolve(canvas.toDataURL('image/jpeg', 0.7))
+      } catch { resolve(null) }
+      cleanup()
+    }
+    video.onerror = () => { resolve(null); cleanup() }
+  })
 }
 
 // ─── File Import — paso de confirmación ──────────────────────────────────────
@@ -276,6 +316,10 @@ function FileImportStep({ onConfirm, onCancel, importing }) {
       // Pedirle al main que abra el diálogo y devuelva metadatos sin guardar aún
       const result = await window.api?.backgrounds.pickFile()
       if (!result || result.error) return
+      // Video: capturar un frame estático — se usará como thumbnail en los grids
+      if (result.type === 'video' && result.previewUrl) {
+        result.previewSrc = await captureVideoFrame(result.previewUrl)
+      }
       setPendingFile(result)
       setCustomName(result.name)
     } finally {
@@ -305,13 +349,17 @@ function FileImportStep({ onConfirm, onCancel, importing }) {
             <img src={pendingFile.previewSrc} alt="" className="w-full h-full object-contain" />
           )}
           {pendingFile.type === 'video' && (
-            <div className="w-full h-full flex items-center justify-center gap-2 text-white/40">
-              <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                <path d="M15 10l4.553-2.276A1 1 0 0 1 21 8.723v6.554a1 1 0 0 1-1.447.894L15 14"/>
-                <rect x="2" y="6" width="13" height="12" rx="2"/>
-              </svg>
-              <span className="text-[12px] font-semibold">{pendingFile.filename}</span>
-            </div>
+            pendingFile.previewUrl ? (
+              <video src={pendingFile.previewUrl} muted autoPlay loop playsInline className="w-full h-full object-contain" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center gap-2 text-white/40">
+                <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M15 10l4.553-2.276A1 1 0 0 1 21 8.723v6.554a1 1 0 0 1-1.447.894L15 14"/>
+                  <rect x="2" y="6" width="13" height="12" rx="2"/>
+                </svg>
+                <span className="text-[12px] font-semibold">{pendingFile.filename}</span>
+              </div>
+            )
           )}
         </div>
 
@@ -366,9 +414,9 @@ function FileImportStep({ onConfirm, onCancel, importing }) {
 }
 
 // ─── Panel principal ──────────────────────────────────────────────────────────
-const MIN_GRID_H  = 120  // px mínimos para el grid
-const MIN_EDITOR_H = 80  // px mínimos para el editor
-const DEFAULT_EDITOR_H = 260
+const MIN_GRID_H  = 160  // px mínimos para el grid
+const MIN_EDITOR_H = 100 // px mínimos para el editor
+const DEFAULT_EDITOR_H = 300
 
 export function BackgroundsPanel({ onClose }) {
   const { activeBg, setActiveBg } = useApp()
@@ -489,7 +537,7 @@ export function BackgroundsPanel({ onClose }) {
       <div
         ref={panelRef}
         className={cn(
-          'fixed top-[54px] right-0 bottom-0 z-[1001] w-[420px]',
+          'fixed top-[54px] right-0 bottom-0 z-[1001] w-[780px] max-w-[92vw]',
           'bg-white dark:bg-dark-surface',
           'border-l border-surface-muted dark:border-dark-border',
           'flex flex-col overflow-hidden shadow-2xl',
@@ -537,7 +585,7 @@ export function BackgroundsPanel({ onClose }) {
           {loading ? (
             <div className="flex justify-center py-8"><Spinner size={20} /></div>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-4">
               {backgrounds.map(bg => (
                 <div key={bg.id} className="flex flex-col">
                   <BgCard
@@ -576,7 +624,7 @@ export function BackgroundsPanel({ onClose }) {
                 </div>
               ))}
               {backgrounds.length === 0 && (
-                <div className="col-span-2 flex flex-col items-center justify-center py-8 gap-2 text-slate-400">
+                <div className="col-span-3 flex flex-col items-center justify-center py-8 gap-2 text-slate-400">
                   <p className="text-sm">No hay fondos en esta categoría</p>
                   {isFileTab && (
                     <button
@@ -606,23 +654,27 @@ export function BackgroundsPanel({ onClose }) {
           className="flex-shrink-0 bg-white dark:bg-dark-surface border-t border-surface-muted dark:border-dark-border flex flex-col overflow-hidden"
           style={{ height: editorH }}
         >
-          {/* Tabs del editor */}
-          <div className="flex border-b border-surface-muted dark:border-dark-border flex-shrink-0">
-            {[
-              { id: 'color',    label: '+ Color' },
-              { id: 'gradient', label: '+ Gradiente' },
-              { id: 'file',     label: '+ Archivo' },
-            ].map(t => (
-              <button key={t.id} onClick={() => setEditorTab(t.id)}
-                className={cn(
-                  'flex-1 py-2.5 text-[12px] font-semibold transition-all',
-                  editorTab === t.id
-                    ? 'text-brand-600 dark:text-brand-400 border-b-2 border-brand-600 dark:border-brand-400'
-                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300',
-                )}>
-                {t.label}
-              </button>
-            ))}
+          {/* Encabezado + selector de tipo a crear */}
+          <div className="px-4 pt-3 pb-2 border-b border-surface-muted dark:border-dark-border flex-shrink-0">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Crear nuevo fondo</p>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'color',    label: 'Color',     icon: <ColorSwatchIcon /> },
+                { id: 'gradient', label: 'Gradiente', icon: <GradientIcon /> },
+                { id: 'file',     label: 'Archivo',   icon: <UploadIcon /> },
+              ].map(t => (
+                <button key={t.id} onClick={() => setEditorTab(t.id)}
+                  className={cn(
+                    'flex items-center justify-center gap-1.5 py-2 rounded-xl border-2 text-[12px] font-bold transition-all',
+                    editorTab === t.id
+                      ? 'border-brand-500 bg-brand-50 dark:bg-brand-950/30 text-brand-600 dark:text-brand-400'
+                      : 'border-surface-muted dark:border-dark-border text-slate-500 hover:border-brand-300 dark:hover:border-brand-700 hover:text-slate-700 dark:hover:text-slate-300',
+                  )}>
+                  {t.icon}
+                  {t.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Contenido del editor — scroll propio */}
