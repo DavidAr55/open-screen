@@ -2,6 +2,7 @@ import { app }                                from 'electron'
 import { WindowManager, loadAppIcon }         from './windows/WindowManager.js'
 import { initDatabase }                       from './db/database.js'
 import { registerAllIPC }                     from './ipc/index.js'
+import { SettingsRepository }                 from './db/repositories/SettingsRepository.js'
 import { createServer }                       from 'http'
 import { createReadStream, existsSync, statSync } from 'fs'
 import { extname }                            from 'path'
@@ -53,6 +54,7 @@ function startBgFileServer() {
           'Content-Range':  `bytes ${start}-${end}/${fileSize}`,
           'Accept-Ranges':  'bytes',
           'Content-Length': chunk,
+          'Access-Control-Allow-Origin': '*',
         })
         createReadStream(filePath, { start, end }).pipe(res)
       } else {
@@ -60,6 +62,7 @@ function startBgFileServer() {
           'Content-Type':   contentType,
           'Accept-Ranges':  'bytes',
           'Content-Length': fileSize,
+          'Access-Control-Allow-Origin': '*',
         })
         createReadStream(filePath).pipe(res)
       }
@@ -98,9 +101,10 @@ app.whenReady().then(async () => {
   // 2. Base de datos
   const db = initDatabase()
 
-  // 3. Ventanas
+  // 3. Ventanas (respeta el monitor de proyección preferido, guardado en settings)
+  const activeMonitorPref = new SettingsRepository(db).get('active_monitor', 'secondary')
   windowManager = new WindowManager()
-  windowManager.createAll()
+  windowManager.createAll(activeMonitorPref)
 
   // 4. IPC
   registerAllIPC(db, windowManager, bgServerPort)

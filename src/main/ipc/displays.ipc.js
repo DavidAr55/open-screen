@@ -3,7 +3,7 @@ import { ipcMain, screen } from 'electron'
 /**
  * Canales IPC para detección de monitores.
  */
-export function registerDisplaysIPC() {
+export function registerDisplaysIPC(windowManager) {
 
   ipcMain.handle('displays:getAll', () => {
     const primary = screen.getPrimaryDisplay()
@@ -14,5 +14,11 @@ export function registerDisplaysIPC() {
       bounds:    d.bounds,
       scaleFactor: d.scaleFactor,
     }))
+  })
+
+  // Mueve la ventana de proyección en caliente al cambiar la preferencia en Ajustes
+  ipcMain.handle('displays:setActiveMonitor', (_e, pref) => {
+    windowManager.moveProjectionTo(pref)
+    return true
   })
 }

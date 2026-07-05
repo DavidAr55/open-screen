@@ -25,9 +25,20 @@ export class WindowManager {
   #control    = null
   #projection = null
 
-  createAll() {
+  createAll(activeMonitorPref = 'secondary') {
     this.#control    = this.#createControlWindow()
-    this.#projection = this.#createProjectionWindow()
+    this.#projection = this.#createProjectionWindow(activeMonitorPref)
+  }
+
+  // ── Resuelve la preferencia guardada ('primary'|'secondary'|'third') a un Display real ──
+  #pickDisplay(pref) {
+    const displays = screen.getAllDisplays()
+    const primary  = screen.getPrimaryDisplay()
+    const others   = displays.filter(d => d.id !== primary.id)
+
+    if (pref === 'primary') return primary
+    if (pref === 'third')   return others[1] ?? others[0] ?? primary
+    return others[0] ?? primary // 'secondary' (predeterminado)
   }
 
   // ── Ventana de control (operador) ──────────────────────
@@ -78,10 +89,9 @@ export class WindowManager {
   }
 
   // ── Ventana de proyección (pantalla secundaria) ────────
-  #createProjectionWindow() {
+  #createProjectionWindow(monitorPref = 'secondary') {
     const displays = screen.getAllDisplays()
-    const primary  = screen.getPrimaryDisplay()
-    const target   = displays.find(d => d.id !== primary.id) ?? primary
+    const target   = this.#pickDisplay(monitorPref)
 
     const { x, y, width, height } = target.bounds
 
@@ -133,5 +143,15 @@ export class WindowManager {
    */
   sendToProjection(channel, payload) {
     this.#projection?.webContents?.send(channel, payload)
+  }
+
+  /**
+   * Mueve la ventana de proyección a otro monitor en caliente.
+   * @param {'primary'|'secondary'|'third'} monitorPref
+   */
+  moveProjectionTo(monitorPref) {
+    if (!this.#projection) return
+    const target = this.#pickDisplay(monitorPref)
+    this.#projection.setBounds(target.bounds)
   }
 }
