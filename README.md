@@ -42,6 +42,13 @@ Inspirado en herramientas como EasyWorship o ProPresenter, pero con un enfoque *
 - 🖼️ **Fondos de proyección** — colores sólidos, degradados, imágenes, GIFs y video en bucle
 - 📖 **Módulo bíblico OSB** — búsqueda y proyección de versículos con soporte para múltiples traducciones
 - 🌗 **Modo claro y oscuro** — claro por defecto, oscuro disponible con un toggle
+- 🎬 **Vista de escenario y temporizador** — panel "Escenario" con reloj, texto en vivo y "lo próximo" para el presentador; cronómetro/cuenta regresiva solo para el operador
+- 🎞️ **Multimedia directo** — importa imágenes, GIFs y video y proyéctalos con un clic, sin pasar por el editor de texto
+- 🔍 **Buscador global** — una sola barra de búsqueda que combina referencias y texto bíblico, canciones, presentaciones, multimedia y biblioteca, con salto directo al resultado
+- 🎙️ **Importar letras desde PowerPoint** — extrae el texto de un `.pptx` diapositiva por diapositiva para crear una canción
+- 💧 **Marca de agua configurable** — logo propio en la proyección, con posición, opacidad y margen ajustables
+- 🖥️ **Selección de monitor** — elige a qué pantalla se envía la proyección (y cámbiala en caliente sin reiniciar)
+- 💾 **Respaldo de la base de datos** — exporta e importa toda tu información (biblioteca, canciones, presentaciones, fondos) con un respaldo de seguridad automático antes de restaurar
 - 🔒 **Arquitectura segura** — comunicación entre ventanas vía IPC con `contextBridge`, sin acceso directo a Node desde el renderer
 
 ---
@@ -60,7 +67,7 @@ Inspirado en herramientas como EasyWorship o ProPresenter, pero con un enfoque *
 ### Requisitos
 
 - [Node.js](https://nodejs.org/) v18 o superior
-- npm (incluido con Node.js)
+- [pnpm](https://pnpm.io/) (`npm install -g pnpm`)
 - Compilador nativo para `better-sqlite3`:
   - **Windows**: `npm install -g windows-build-tools`
   - **macOS**: Xcode Command Line Tools (`xcode-select --install`)
@@ -75,16 +82,22 @@ cd open-screen
 
 # 2. Instala las dependencias
 #    (postinstall recompila better-sqlite3 para Electron automáticamente)
-npm install
+pnpm install
 
 # 3. Ejecuta en modo desarrollo (hot-reload activo)
-npm run dev
+pnpm dev
 
 # 4. Construir para producción
-npm run build
+pnpm build
+
+# 5. Generar un instalador distribuible (.exe, .dmg o .AppImage)
+pnpm dist        # detecta la plataforma actual
+pnpm dist:win    # fuerza el instalador de Windows (NSIS)
+pnpm dist:mac    # fuerza el .dmg de macOS
+pnpm dist:linux  # fuerza el AppImage de Linux
 ```
 
-Al iniciar, la app detecta automáticamente los monitores conectados:
+El instalador queda en `dist/`. Al iniciar, la app detecta automáticamente los monitores conectados:
 - **2+ monitores** → proyección en pantalla completa en el monitor secundario
 - **1 monitor** → ambas ventanas en el mismo monitor (modo desarrollo)
 
@@ -113,16 +126,26 @@ open-screen/
 │   │   │       ├── SlidePresentationRepository.js
 │   │   │       ├── BackgroundRepository.js
 │   │   │       └── index.js
+│   │   ├── utils/
+│   │   │   ├── bibleReference.js ← Parser de referencias bíblicas ("Juan 3:16") para el buscador global
+│   │   │   ├── pptxParser.js     ← Extrae texto de .pptx (JSZip + fast-xml-parser)
+│   │   │   └── sqlHelpers.js     ← Helpers para LIKE/FTS5 seguros con input de usuario
 │   │   └── ipc/                  ← Manejadores de mensajes entre ventanas
 │   │       ├── index.js          ← Registra todos los handlers
+│   │       ├── app.ipc.js        ← Versión de la app
 │   │       ├── library.ipc.js
 │   │       ├── settings.ipc.js
 │   │       ├── projection.ipc.js
 │   │       ├── displays.ipc.js
 │   │       ├── bible.ipc.js
-│   │       ├── songs.ipc.js
+│   │       ├── songs.ipc.js      ← CRUD + importar letras desde PowerPoint (.pptx)
 │   │       ├── presentations.ipc.js
-│   │       └── backgrounds.ipc.js
+│   │       ├── backgrounds.ipc.js
+│   │       ├── multimedia.ipc.js ← Importar y proyectar imágenes/GIFs/video directo
+│   │       ├── search.ipc.js     ← Buscador global (agrega Biblia, canciones, PDFs, multimedia, biblioteca)
+│   │       ├── fonts.ipc.js      ← Lista las fuentes instaladas en el sistema
+│   │       ├── watermark.ipc.js  ← Elegir imagen de marca de agua
+│   │       └── backup.ipc.js     ← Exportar/importar la base de datos completa
 │   │
 │   ├── preload/                  ← Puente seguro entre Node.js y el navegador
 │   │   ├── control.js            ← Expone window.api con todos los namespaces
@@ -139,25 +162,35 @@ open-screen/
 │       │       │   ├── SongsPage.jsx        ← Gestión y proyección de canciones
 │       │       │   ├── ScripturePage.jsx    ← Búsqueda y proyección de versículos
 │       │       │   ├── PresentationsPage.jsx ← Importar y proyectar PDFs
+│       │       │   ├── MultimediaPage.jsx   ← Importar y proyectar imágenes/GIFs/video directo
+│       │       │   ├── StagePage.jsx        ← Vista de escenario para el presentador
 │       │       │   └── SettingsPage.jsx     ← Configuración general
 │       │       ├── components/
 │       │       │   ├── editor/SlideEditor.jsx
 │       │       │   ├── quick/QuickGrid.jsx
 │       │       │   ├── live/LivePanel.jsx
+│       │       │   ├── songs/PptxImportView.jsx ← Importar letras desde PowerPoint
 │       │       │   ├── layout/Sidebar.jsx
 │       │       │   ├── layout/Topbar.jsx
+│       │       │   ├── layout/Timer.jsx     ← Cronómetro/cuenta regresiva del operador
+│       │       │   ├── layout/GlobalSearch.jsx ← Buscador global con salto directo al resultado
 │       │       │   └── backgound/BackgroundsPanel.jsx
 │       │       └── hooks/
 │       │           └── useLibrary.js
 │       ├── projection/           ← Ventana de proyección (solo recibe datos)
 │       │   └── src/
-│       │       └── App.jsx       ← Capa de fondo + capa de texto + capa de slides
+│       │       └── App.jsx       ← Capas: fondo / multimedia / texto / slide / marca de agua
 │       └── shared/               ← Componentes reutilizables entre renderers
 │           ├── components/
 │           │   ├── ui/index.jsx  ← Sistema de diseño: Button, Card, Input, Badge…
 │           │   └── ConfirmModal.jsx
+│           ├── constants/
+│           │   ├── defaultBackground.js ← Fondo de respaldo hasta resolver el predeterminado
+│           │   ├── watermark.js         ← Defaults y helpers de posición/opacidad de la marca de agua
+│           │   └── searchTypes.js       ← Colores/destino de navegación por tipo de resultado del buscador
 │           └── utils/
-│               └── cn.js         ← Utilidad para combinar clases de Tailwind
+│               ├── cn.js         ← Utilidad para combinar clases de Tailwind
+│               └── font.js       ← Tamaño y familia de fuente de proyección (compartido control/proyección)
 │
 ├── scripts/                      ← Herramientas de línea de comandos
 │   ├── create-osb-module.mjs     ← Genera un .osb desde un JSON fuente
@@ -197,7 +230,7 @@ Open Screen tiene **tres piezas que se comunican entre sí**:
 │                                                                     │
 │  ┌────────────────┐    ┌──────────────────────────────────────────┐ │
 │  │ WindowManager  │    │ Repositorios SQLite                      │ │
-│  │                │    │  settings · library · songs              │ │
+│  │                │    │  settings · library · songs · media      │ │
 │  │ controlWindow  │    │  presentations · backgrounds · bible     │ │
 │  │ projWindow     │    └──────────────────────────────────────────┘ │
 │  └────────────────┘                                                 │
@@ -210,10 +243,12 @@ Open Screen tiene **tres piezas que se comunican entre sí**:
 │  src/renderer/control/    │    │  src/renderer/projection/        │
 │                           │    │                                  │
 │  React 19 + Tailwind      │    │  React 19                        │
-│  AppContext (estado)      │───►│  Capas: fondo / texto / slide    │
-│  Páginas navegables       │    │  Transición CSS 220ms            │
-│  (Control, Songs,         │    │  Tamaño de fuente dinámico       │
-│   Scripture, PDF, Config) │    │                                  │
+│  AppContext (estado)      │───►│  Capas: fondo / multimedia /     │
+│  Páginas navegables       │    │  texto / slide / marca de agua   │
+│  (Control, Songs,         │    │  Transición CSS 220ms            │
+│   Scripture, PDF,         │    │  Tamaño y familia de fuente      │
+│   Multimedia, Escenario,  │    │  dinámicos                       │
+│   Config)                 │    │                                  │
 └───────────────────────────┘    └──────────────────────────────────┘
 ```
 
@@ -250,7 +285,9 @@ React actualiza estado → CSS fade-in 220ms  ← pantalla actualizada
 | **Canciones** | `SongsPage.jsx` | CRUD de canciones con secciones arrastrables, vista detalle y modo proyector paso a paso |
 | **Escrituras** | `ScripturePage.jsx` | Navegador bíblico (libro/capítulo/versículo) + búsqueda FTS5 con debounce |
 | **Presentaciones** | `PresentationsPage.jsx` | Importa PDFs, renderiza páginas con pdfjs-dist y las proyecta como imágenes |
-| **Ajustes** | `SettingsPage.jsx` | Tema, monitor, fondo, fuente, velocidad de transición, backup de DB |
+| **Multimedia** | `MultimediaPage.jsx` | Importa imágenes/GIFs/video y los proyecta directo, sin pasar por el editor de texto |
+| **Escenario** | `StagePage.jsx` | Vista de solo lectura para el presentador: reloj, texto en vivo y "lo próximo" |
+| **Ajustes** | `SettingsPage.jsx` | Tema, monitor, fondo, fuente, marca de agua, atajos de teclado, versión bíblica predeterminada, exportar/importar DB |
 
 ---
 
@@ -260,16 +297,23 @@ Estas son todas las funciones que los componentes React pueden llamar:
 
 | Namespace | Método | Tipo | Descripción |
 |---|---|---|---|
-| `projection` | `send(payload)` | send | Envía `{ text, bg }` a la pantalla |
+| `app` | `getVersion()` | invoke | Versión real de la app (`package.json`) |
+| `projection` | `send(payload)` | send | Envía `{ text, bg, fontSize, fontFamily, watermark }` a la pantalla |
 | `projection` | `clear()` | send | Limpia la pantalla |
 | `projection` | `freeze(bool)` | send | Congela/descongela la imagen |
+| `projection` | `setFont/setFontSize/setWatermark` | send | Actualiza fuente, tamaño o marca de agua en caliente |
 | `library` | `findAll/create/update/delete` | invoke | CRUD de ítems de biblioteca |
 | `settings` | `get/set/getAll/setMany` | invoke | Configuraciones clave-valor |
-| `displays` | `getAll()` | invoke | Lista los monitores conectados |
+| `displays` | `getAll/setActiveMonitor` | invoke | Lista monitores y mueve la proyección al elegido |
+| `backup` | `export/import` | invoke | Exporta/restaura la base de datos completa (con respaldo de seguridad automático) |
 | `bible` | `listModules/getBooks/getChapter/search...` | invoke | Lectura de módulos .osb |
-| `songs` | `findAll/create/update/delete/toggleFavorite` | invoke | CRUD de canciones |
+| `songs` | `findAll/create/update/delete/toggleFavorite/pickPptx/parsePptx` | invoke | CRUD de canciones + importar letras desde PowerPoint |
 | `presentations` | `import/findAll/readFile/projectSlide...` | mixed | Gestión y proyección de PDFs |
 | `backgrounds` | `findAll/create/update/delete/setActive...` | mixed | Gestión de fondos de proyección |
+| `multimedia` | `findAll/import/update/delete/toggleFavorite/project/clear/mediaControl` | mixed | Gestión y proyección directa de imágenes/GIFs/video |
+| `search` | `global(query, opts)` | invoke | Buscador global: Biblia, canciones, presentaciones, multimedia y biblioteca en una sola llamada |
+| `fonts` | `getAll()` | invoke | Lista las fuentes instaladas en el sistema |
+| `watermark` | `pickImage()` | invoke | Elige la imagen de marca de agua como data URL |
 
 > **invoke** = espera respuesta (async). **send** = dispara y olvida (no espera respuesta).
 
@@ -292,6 +336,8 @@ El esquema usa **migraciones versionadas** (`user_version` pragma). Para agregar
 | v4 | `slide_presentations` (presentaciones PDF) |
 | v5 | columna `is_favorite` en `slide_presentations` |
 | v6 | `backgrounds` (con 5 fondos preset sembrados al crear) |
+| v7 | `media` extendida con `thumbnail`, `is_favorite`, `updated_at` (multimedia directo) |
+| v8 | `songs_fts` (búsqueda FTS5 de título/artista/letra) para el buscador global |
 
 ---
 
@@ -360,9 +406,12 @@ node scripts/create-osb-module.mjs \
 | [Electron 33](https://www.electronjs.org/) | Framework de escritorio multiplataforma |
 | [React 19](https://react.dev/) | UI del renderer (control + proyección) |
 | [electron-vite 2](https://electron-vite.org/) | Build tool con dos entradas de renderer independientes |
+| [electron-builder](https://www.electron.build/) | Empaquetado e instaladores (`.exe`/NSIS, `.dmg`, `.AppImage`) |
 | [Tailwind CSS 3](https://tailwindcss.com/) | Sistema de estilos utilitario |
 | [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) | SQLite embebido y sincrónico (requiere compilación nativa) |
 | [pdfjs-dist](https://github.com/mozilla/pdf.js) | Renderizado de PDFs en el renderer de control |
+| [JSZip](https://stuk.github.io/jszip/) + [fast-xml-parser](https://github.com/NaturalIntelligence/fast-xml-parser) | Extracción de texto de archivos `.pptx` |
+| [font-list](https://github.com/oldj/node-font-list) | Listado de fuentes instaladas en el sistema |
 | [Plus Jakarta Sans](https://fonts.google.com/specimen/Plus+Jakarta+Sans) | Tipografía principal |
 | [JetBrains Mono](https://www.jetbrains.com/legalforms/fonts/) | Tipografía monoespaciada para referencias |
 
@@ -379,18 +428,23 @@ node scripts/create-osb-module.mjs \
 - [x] Biblioteca de contenido con acceso rápido
 
 ### v0.3 — Multimedia avanzado
-- [ ] Transiciones personalizables entre slides
-- [ ] Soporte de temas visuales (colores, fuentes, tamaños personalizados)
-- [ ] Vista previa del fondo activo en la ventana de control
+- [x] Transiciones personalizables entre slides
+- [x] Soporte de temas visuales (colores, fuentes, tamaños personalizados)
+- [x] Vista previa del fondo activo en la ventana de control
+- [x] Proyección directa de imágenes, GIFs y video (sin pasar por el editor de texto)
+- [x] Buscador global (Biblia, canciones, presentaciones, multimedia, biblioteca)
+- [x] Marca de agua configurable en la proyección
+- [x] Importar letras de canciones desde PowerPoint (.pptx)
 
 ### v0.4 — Control avanzado
+- [x] Atajos de teclado configurables
 - [ ] Soporte MIDI para control con pedalera física
-- [ ] Vista de "stage monitor" para el presentador
-- [ ] Temporizador visible solo para el operador
-- [ ] Atajos de teclado configurables
+- [x] Vista de "stage monitor" para el presentador
+- [x] Temporizador visible solo para el operador
+- [x] Selección de monitor de proyección, con cambio en caliente
 
 ### v1.0 — Producción
-- [ ] Empaquetado con electron-builder (`.exe`, `.dmg`, `.AppImage`)
+- [x] Empaquetado con electron-builder (`.exe`, `.dmg`, `.AppImage`)
 - [ ] Auto-updater
 - [ ] Modo multi-operador (red local)
 
