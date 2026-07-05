@@ -1,7 +1,17 @@
 import { useState, useEffect } from 'react'
 import { useApp } from '../context/AppContext.jsx'
 import { Button, Card, Input, Select, SectionLabel } from '@shared/components/ui/index.jsx'
+import { ConfirmModal } from '@shared/components/ConfirmModal.jsx'
+import { buildFontFamily, calcAutoFontSize } from '@shared/utils/font.js'
+import { WATERMARK_MARGIN_MAP, WATERMARK_OPACITY_MAP } from '@shared/constants/watermark.js'
+import { DEFAULT_BG } from '@shared/constants/defaultBackground.js'
 import { cn } from '@shared/utils/cn.js'
+
+// Ancho de referencia (px) del lienzo de preview — sirve para escalar el tamaño
+// de fuente personalizado a como se vería realmente en una proyección de 1920px
+const PREVIEW_REF_WIDTH  = 480
+const PREVIEW_REAL_WIDTH = 1920
+const PREVIEW_SCALE      = PREVIEW_REF_WIDTH / PREVIEW_REAL_WIDTH
 
 // ─── Iconos ───────────────────────────────────────────────────────────────────
 const MonitorIcon = () => (
@@ -27,6 +37,14 @@ const TypeIcon = () => (
     <polyline points="4 7 4 4 20 4 20 7" />
     <line x1="9" y1="20" x2="15" y2="20" />
     <line x1="12" y1="4" x2="12" y2="20" />
+  </svg>
+)
+
+const WatermarkIcon = () => (
+  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <circle cx="8.5" cy="8.5" r="1.5" />
+    <path d="m21 15-5-5L5 21" />
   </svg>
 )
 
@@ -105,6 +123,263 @@ function SettingItem({ label, description, children }) {
         {children}
       </div>
     </div>
+  )
+}
+
+// ─── Apariencia de proyección: fuente + tamaño (100% personalizable) ──────────
+// Un único borrador y una única preview para fuente y tamaño — nada se aplica
+// a la proyección real hasta pulsar "Aplicar cambios". El fondo no se edita aquí:
+// solo se muestra el nombre del actual; para cambiarlo usa el botón «Fondo» de la barra superior.
+function ProjectionAppearanceSetting({ fontFamily, fonts, fontSize, currentBackgroundName, onSave }) {
+  const [draftFont,   setDraftFont]   = useState(fontFamily)
+  const [draftAuto,   setDraftAuto]   = useState(!fontSize || fontSize === 'auto')
+  const [draftSize,   setDraftSize]   = useState(Number(fontSize) > 0 ? Number(fontSize) : 64)
+  const [sample,      setSample]      = useState('Así se verá el texto proyectado')
+
+  // Sincronizar borradores si el ajuste guardado cambia desde fuera (p. ej. carga inicial)
+  useEffect(() => { setDraftFont(fontFamily) }, [fontFamily])
+  useEffect(() => {
+    setDraftAuto(!fontSize || fontSize === 'auto')
+    if (Number(fontSize) > 0) setDraftSize(Number(fontSize))
+  }, [fontSize])
+
+  const draftFontSizeValue = draftAuto ? 'auto' : String(draftSize)
+  const dirty = draftFont !== fontFamily || draftFontSizeValue !== (fontSize || 'auto')
+
+  const realSize = draftAuto ? calcAutoFontSize(sample) : draftSize
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* Fuente */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Fuente de proyección</label>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Tipografía del texto proyectado (fuentes instaladas en este equipo)</p>
+        </div>
+        <Select value={draftFont} onChange={(e) => setDraftFont(e.target.value)} className="w-48 flex-shrink-0">
+          {!fonts.includes(draftFont) && (
+            <option value={draftFont} style={{ fontFamily: buildFontFamily(draftFont) }}>{draftFont}</option>
+          )}
+          {fonts.map(font => (
+            <option key={font} value={font} style={{ fontFamily: buildFontFamily(font) }}>{font}</option>
+          ))}
+        </Select>
+      </div>
+
+      {/* Tamaño de fuente — 100% personalizado en px, o automático según el texto */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Tamaño de fuente</label>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Define un tamaño exacto en píxeles, o deja que se ajuste solo según el texto</p>
+        </div>
+        <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 flex-shrink-0 cursor-pointer select-none">
+          <input type="checkbox" checked={draftAuto} onChange={(e) => setDraftAuto(e.target.checked)} className="accent-brand-500" />
+          Automático
+        </label>
+      </div>
+
+      {!draftAuto && (
+        <div className="flex items-center gap-3 -mt-1">
+          <input
+            type="range" min="16" max="200" value={draftSize}
+            onChange={(e) => setDraftSize(+e.target.value)}
+            className="flex-1 accent-brand-500"
+          />
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <input
+              type="number" min="8" max="400" value={draftSize}
+              onChange={(e) => setDraftSize(Math.max(8, Math.min(400, +e.target.value || 8)))}
+              className="w-16 px-2 py-1 text-sm rounded-lg bg-surface-soft dark:bg-dark-card border border-surface-muted dark:border-dark-border text-slate-900 dark:text-slate-100 outline-none focus:border-brand-500"
+            />
+            <span className="text-xs text-slate-400">px</span>
+          </div>
+        </div>
+      )}
+
+      {/* Fondo predeterminado — solo informativo; se cambia desde el botón «Fondo» de la barra superior */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Fondo predeterminado</label>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Se cambia desde el botón «Fondo» en la barra superior del panel de control</p>
+        </div>
+        <span className="text-[13px] font-semibold text-brand-500 flex-shrink-0">{currentBackgroundName}</span>
+      </div>
+
+      {/* Preview compartida — refleja la fuente y el tamaño elegidos arriba (fondo neutro fijo) */}
+      <div>
+        <SectionLabel className="mb-1.5">Así se verá el texto proyectado</SectionLabel>
+        <div className="slide-canvas w-full" style={{ maxWidth: PREVIEW_REF_WIDTH }}>
+          <div className="absolute inset-0" style={{ background: DEFAULT_BG.value }} />
+          <span className="absolute top-2 left-2.5 font-mono text-[9px] text-white/20 tracking-wider select-none">PREVIEW</span>
+          <div className="absolute inset-0 flex items-center justify-center p-4 overflow-hidden">
+            <p
+              className="text-white font-extrabold text-center leading-snug whitespace-pre-wrap break-words"
+              style={{
+                fontFamily: buildFontFamily(draftFont),
+                fontSize: `${Math.max(6, Math.round(realSize * PREVIEW_SCALE))}px`,
+                textShadow: '0 2px 24px rgba(0,0,0,.8)',
+                maxWidth: '100%',
+              }}
+            >
+              {sample.trim() || 'Vista previa'}
+            </p>
+          </div>
+        </div>
+        <input
+          value={sample}
+          onChange={(e) => setSample(e.target.value)}
+          placeholder="Escribe un texto de muestra…"
+          className="w-full mt-2 px-3 py-1.5 text-xs rounded-lg bg-surface-soft dark:bg-dark-card border border-surface-muted dark:border-dark-border text-slate-600 dark:text-slate-300 outline-none focus:border-brand-500"
+          style={{ maxWidth: PREVIEW_REF_WIDTH }}
+        />
+      </div>
+
+      <div className="flex justify-end">
+        <Button
+          size="sm"
+          disabled={!dirty}
+          onClick={() => onSave({ fontFamily: draftFont, fontSize: draftFontSizeValue })}
+        >
+          Aplicar cambios
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Selector visual de esquina (marca de agua) ───────────────────────────────
+const CORNERS = [
+  { key: 'top-left',     pos: 'top-1 left-1' },
+  { key: 'top-right',    pos: 'top-1 right-1' },
+  { key: 'bottom-left',  pos: 'bottom-1 left-1' },
+  { key: 'bottom-right', pos: 'bottom-1 right-1' },
+]
+
+function CornerPicker({ value, onChange }) {
+  return (
+    <div className="relative w-16 h-11 rounded-md border border-surface-muted dark:border-dark-border bg-slate-100 dark:bg-slate-800 flex-shrink-0">
+      {CORNERS.map(c => (
+        <button
+          key={c.key}
+          type="button"
+          title={c.key}
+          onClick={() => onChange(c.key)}
+          className={cn(
+            'absolute w-3 h-3 rounded-sm transition-colors',
+            c.pos,
+            value === c.key
+              ? 'bg-brand-500'
+              : 'bg-slate-300 dark:bg-slate-600 hover:bg-brand-300 dark:hover:bg-brand-700',
+          )}
+        />
+      ))}
+    </div>
+  )
+}
+
+// ─── Marca de agua: carga de logo, posición, opacidad y margen ────────────────
+function WatermarkSetting({ watermark, onChange }) {
+  const [busy,  setBusy]  = useState(false)
+  const [error, setError] = useState(null)
+
+  const handlePick = async () => {
+    setError(null)
+    setBusy(true)
+    try {
+      const result = await window.api?.watermark.pickImage()
+      if (!result) return
+      if (result.error) { setError(result.error); return }
+      onChange({ image: result.dataUrl, enabled: true })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // Margen escalado para el preview 16:9 (los valores reales están pensados para pantalla completa)
+  const previewMargin = Math.max(4, Math.round((WATERMARK_MARGIN_MAP[watermark.margin] ?? 32) / 6))
+
+  return (
+    <>
+      <SettingItem
+        label="Activar marca de agua"
+        description="Muestra un logo con opacidad en una esquina de la proyección"
+      >
+        <Toggle checked={watermark.enabled} onChange={(v) => onChange({ enabled: v })} />
+      </SettingItem>
+
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Logo</label>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">PNG, JPG, WEBP, GIF o SVG — máx. 5 MB</p>
+          {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {watermark.image && (
+            <img
+              src={watermark.image}
+              alt=""
+              className="w-9 h-9 rounded-md object-contain border border-surface-muted dark:border-dark-border bg-slate-900"
+            />
+          )}
+          <Button variant="secondary" size="sm" onClick={handlePick} disabled={busy}>
+            {busy ? 'Cargando…' : watermark.image ? 'Cambiar' : 'Cargar imagen'}
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Posición</label>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Esquina donde aparece el logo</p>
+        </div>
+        <CornerPicker value={watermark.position} onChange={(position) => onChange({ position })} />
+      </div>
+
+      <SettingItem label="Opacidad" description="Transparencia del logo">
+        <Select
+          value={watermark.opacity}
+          onChange={(e) => onChange({ opacity: e.target.value })}
+          className="w-32"
+        >
+          <option value="low">25%</option>
+          <option value="medium">50%</option>
+          <option value="high">75%</option>
+          <option value="full">100%</option>
+        </Select>
+      </SettingItem>
+
+      <SettingItem label="Margen" description="Distancia respecto al borde">
+        <Select
+          value={watermark.margin}
+          onChange={(e) => onChange({ margin: e.target.value })}
+          className="w-32"
+        >
+          <option value="small">Pequeño</option>
+          <option value="medium">Mediano</option>
+          <option value="large">Grande</option>
+        </Select>
+      </SettingItem>
+
+      {watermark.enabled && watermark.image && (
+        <div className="slide-canvas w-full max-w-sm">
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #0a0a2e 0%, #000010 100%)' }} />
+          <span className="absolute top-2 left-2.5 font-mono text-[9px] text-white/20 tracking-wider select-none">PREVIEW</span>
+          <img
+            src={watermark.image}
+            alt=""
+            className="absolute"
+            style={{
+              maxWidth: '20%', maxHeight: '20%',
+              opacity: WATERMARK_OPACITY_MAP[watermark.opacity] ?? WATERMARK_OPACITY_MAP.medium,
+              top:    watermark.position.startsWith('top')    ? previewMargin : undefined,
+              bottom: watermark.position.startsWith('bottom') ? previewMargin : undefined,
+              left:   watermark.position.endsWith('left')     ? previewMargin : undefined,
+              right:  watermark.position.endsWith('right')    ? previewMargin : undefined,
+            }}
+          />
+        </div>
+      )}
+    </>
   )
 }
 
@@ -196,32 +471,43 @@ export function SettingsPage() {
   const { theme, setTheme, fontFamily, setFontFamily, animationSpeed, setAnimationSpeed,
           displays, projectionClickMode, setProjClickMode,
           keyNavNext, setKeyNavNext, keyNavPrev, setKeyNavPrev,
-          keyProjToggle, setKeyProjToggle } = useApp()
-  
-  // Estados temporales para las opciones (de momento no hacen nada real)
+          keyProjToggle, setKeyProjToggle,
+          activeMonitor, setActiveMonitor,
+          projFontSize, setProjFontSize,
+          projectionFontFamily, setProjectionFontFamily,
+          autoHideControls, setAutoHideControls,
+          watermark, setWatermark,
+          activeBg,
+          defaultBibleModule, setDefaultBibleModule,
+          showVerseNumbers, setShowVerseNumbers } = useApp()
+
+  // Módulos bíblicos instalados (para el select de versión predeterminada)
+  const [bibleModules, setBibleModules] = useState([])
+  useEffect(() => {
+    window.api?.bible.listModules().then(mods => setBibleModules(mods ?? []))
+  }, [])
+
+  // Versión real de la app (package.json, vía app.getVersion())
+  const [appVersion, setAppVersion] = useState(null)
+  useEffect(() => {
+    window.api?.app.getVersion().then(setAppVersion)
+  }, [])
+
+  // Fuentes instaladas en el sistema (para el select de fuente de proyección)
+  const [systemFonts, setSystemFonts] = useState([])
+  useEffect(() => {
+    window.api?.fonts.getAll().then(list => setSystemFonts(list ?? []))
+  }, [])
+
+  // Ajustes cuyo efecto real todavía no está implementado (backup, updates…)
   const [settings, setSettings] = useState({
-    // Proyección
-    activeMonitor: 'secondary',
-    projectionBg: 'dark',
-    autoHideControls: false,
-    
-    // Apariencia
-    fontSize: 'auto',
-    fontFamily: 'Plus Jakarta Sans',
-    animationSpeed: 'normal',
-    
-    // Biblias
-    defaultVersion: 'rv1960',
-    showVerseNumbers: true,
-    
     // Base de datos
-    autoBackup: true,
-    backupFrequency: 'weekly',
-    
+    auto_backup: true,
+    backup_frequency: 'weekly',
+
     // General
-    language: 'es',
-    checkUpdates: true,
-    startOnLogin: false,
+    check_updates: true,
+    start_on_login: false,
   })
 
   // Cargar configuración al montar
@@ -232,20 +518,11 @@ export function SettingsPage() {
         if (!s) return
         setSettings(prev => ({
           ...prev,
-          ...(s.activeMonitor    && { activeMonitor:    s.activeMonitor }),
-          ...(s.projectionBg     && { projectionBg:     s.projectionBg }),
-          ...(s.fontSize         && { fontSize:         s.fontSize }),
-          ...(s.fontFamily       && { fontFamily:       s.fontFamily }),
-          ...(s.animationSpeed   && { animationSpeed:   s.animationSpeed }),
-          ...(s.defaultVersion   && { defaultVersion:   s.defaultVersion }),
-          ...(s.backupFrequency  && { backupFrequency:  s.backupFrequency }),
-          ...(s.language         && { language:         s.language }),
+          ...(s.backup_frequency && { backup_frequency: s.backup_frequency }),
           // coercionar booleanos almacenados como string
-          autoHideControls: s.autoHideControls === 'true',
-          showVerseNumbers: s.showVerseNumbers !== 'false',
-          autoBackup:       s.autoBackup       !== 'false',
-          checkUpdates:     s.checkUpdates     !== 'false',
-          startOnLogin:     s.startOnLogin     === 'true',
+          auto_backup:    s.auto_backup    !== 'false',
+          check_updates:  s.check_updates  !== 'false',
+          start_on_login: s.start_on_login === 'true',
         }))
       } catch (error) {
         console.error('Error loading settings:', error)
@@ -256,7 +533,6 @@ export function SettingsPage() {
 
   const updateSetting = async (key, value) => {
     setSettings(prev => ({ ...prev, [key]: value }))
-    // Aquí puedes guardar en la base de datos si lo deseas
     try {
       await window.api?.settings.set(key, value)
     } catch (error) {
@@ -268,14 +544,36 @@ export function SettingsPage() {
     await window.api?.bible.openBiblesDir()
   }
 
-  const handleExportData = () => {
-    console.log('Exportar datos...')
-    // TODO: Implementar exportación
+  // ── Respaldo: exportar/importar la base de datos completa ─────────────────
+  const [backupBusy,    setBackupBusy]    = useState(false)
+  const [backupMsg,     setBackupMsg]     = useState(null) // { type: 'ok'|'error', text }
+  const [confirmImport, setConfirmImport] = useState(false)
+
+  const handleExportData = async () => {
+    setBackupBusy(true)
+    setBackupMsg(null)
+    try {
+      const result = await window.api?.backup.export()
+      if (result?.canceled) return
+      if (result?.error) setBackupMsg({ type: 'error', text: result.error })
+      else setBackupMsg({ type: 'ok', text: `Respaldo guardado en ${result.path}` })
+    } finally {
+      setBackupBusy(false)
+    }
   }
 
-  const handleImportData = () => {
-    console.log('Importar datos...')
-    // TODO: Implementar importación
+  const runImport = async () => {
+    setConfirmImport(false)
+    setBackupBusy(true)
+    setBackupMsg(null)
+    try {
+      const result = await window.api?.backup.import()
+      if (result?.canceled) return
+      if (result?.error) setBackupMsg({ type: 'error', text: result.error })
+      // Si tiene éxito la app se reinicia sola — no hay nada más que hacer aquí
+    } finally {
+      setBackupBusy(false)
+    }
   }
 
   return (
@@ -379,13 +677,13 @@ export function SettingsPage() {
 
         {/* Proyección */}
         <SettingSection icon={<MonitorIcon />} title="Proyección">
-          <SettingItem 
-            label="Monitor activo" 
+          <SettingItem
+            label="Monitor activo"
             description="Selecciona en qué pantalla proyectar"
           >
             <Select
-              value={settings.activeMonitor}
-              onChange={(e) => updateSetting('activeMonitor', e.target.value)}
+              value={activeMonitor}
+              onChange={(e) => setActiveMonitor(e.target.value)}
               className="w-44"
             >
               <option value="primary">Principal</option>
@@ -394,72 +692,59 @@ export function SettingsPage() {
             </Select>
           </SettingItem>
 
-          <SettingItem 
-            label="Fondo predeterminado" 
-            description="Fondo que se usa al iniciar"
-          >
-            <Select
-              value={settings.projectionBg}
-              onChange={(e) => updateSetting('projectionBg', e.target.value)}
-              className="w-36"
-            >
-              <option value="dark">Oscuro</option>
-              <option value="red">Rojo</option>
-              <option value="black">Negro</option>
-            </Select>
-          </SettingItem>
-
-          <SettingItem 
-            label="Ocultar controles automáticamente" 
-            description="Esconde controles al proyectar en pantalla completa"
+          <SettingItem
+            label="Ocultar controles automáticamente"
+            description="Esconde controles al proyectar en pantalla completa (solo con 1 monitor)"
           >
             <Toggle
-              checked={settings.autoHideControls}
-              onChange={(val) => updateSetting('autoHideControls', val)}
+              checked={autoHideControls}
+              onChange={setAutoHideControls}
             />
           </SettingItem>
 
-          <SettingItem 
-            label="Tamaño de fuente" 
-            description="Tamaño de texto en proyección"
-          >
-            <Select
-              value={settings.fontSize}
-              onChange={(e) => updateSetting('fontSize', e.target.value)}
-              className="w-36"
-            >
-              <option value="auto">Automático</option>
-              <option value="small">Pequeño</option>
-              <option value="medium">Mediano</option>
-              <option value="large">Grande</option>
-            </Select>
-          </SettingItem>
+          <ProjectionAppearanceSetting
+            fontFamily={projectionFontFamily}
+            fonts={systemFonts}
+            fontSize={projFontSize}
+            currentBackgroundName={activeBg?.name ?? 'Oscuro (predeterminado)'}
+            onSave={({ fontFamily, fontSize }) => {
+              setProjectionFontFamily(fontFamily)
+              setProjFontSize(fontSize)
+            }}
+          />
+        </SettingSection>
+
+        {/* Marca de agua */}
+        <SettingSection icon={<WatermarkIcon />} title="Marca de agua">
+          <WatermarkSetting watermark={watermark} onChange={setWatermark} />
         </SettingSection>
 
         {/* Biblias */}
         <SettingSection icon={<TypeIcon />} title="Biblias">
-          <SettingItem 
-            label="Versión predeterminada" 
+          <SettingItem
+            label="Versión predeterminada"
             description="Biblia que se abre por defecto"
           >
             <Select
-              value={settings.defaultVersion}
-              onChange={(e) => updateSetting('defaultVersion', e.target.value)}
+              value={defaultBibleModule ?? ''}
+              onChange={(e) => setDefaultBibleModule(e.target.value)}
               className="w-44"
+              disabled={bibleModules.length === 0}
             >
-              <option value="rv1960">Reina Valera 1960</option>
-              <option value="nvi">Nueva Versión Internacional</option>
-              <option value="kjv">King James Version</option>
+              {bibleModules.length === 0 && <option value="">Sin módulos instalados</option>}
+              {bibleModules.map(m => (
+                <option key={m.id} value={m.id}>{m.abbreviation} — {m.name}</option>
+              ))}
             </Select>
           </SettingItem>
 
-          <SettingItem 
-            label="Mostrar números de versículo" 
+          <SettingItem
+            label="Mostrar números de versículo"
             description="Incluir numeración en proyección"
           >
             <Toggle
-              checked={settings.showVerseNumbers}
-              onChange={(val) => updateSetting('showVerseNumbers', val)}
+              checked={showVerseNumbers}
+              onChange={setShowVerseNumbers}
             />
           </SettingItem>
 
@@ -485,20 +770,20 @@ export function SettingsPage() {
             description="Crear copias de seguridad automáticas"
           >
             <Toggle
-              checked={settings.autoBackup}
-              onChange={(val) => updateSetting('autoBackup', val)}
+              checked={settings.auto_backup}
+              onChange={(val) => updateSetting('auto_backup', val)}
             />
           </SettingItem>
 
-          <SettingItem 
-            label="Frecuencia de respaldo" 
+          <SettingItem
+            label="Frecuencia de respaldo"
             description="Cada cuánto hacer backup"
           >
             <Select
-              value={settings.backupFrequency}
-              onChange={(e) => updateSetting('backupFrequency', e.target.value)}
+              value={settings.backup_frequency}
+              onChange={(e) => updateSetting('backup_frequency', e.target.value)}
               className="w-36"
-              disabled={!settings.autoBackup}
+              disabled={!settings.auto_backup}
             >
               <option value="daily">Diario</option>
               <option value="weekly">Semanal</option>
@@ -506,43 +791,58 @@ export function SettingsPage() {
             </Select>
           </SettingItem>
 
-          <SettingItem 
-            label="Exportar/Importar" 
+          <SettingItem
+            label="Exportar/Importar"
             description="Migra tu contenido a otro equipo"
           >
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleExportData}
-              >
-                Exportar
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleImportData}
-              >
-                Importar
-              </Button>
+            <div className="flex flex-col items-end gap-1.5">
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={backupBusy}
+                  onClick={handleExportData}
+                >
+                  Exportar
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={backupBusy}
+                  onClick={() => setConfirmImport(true)}
+                >
+                  Importar
+                </Button>
+              </div>
+              {backupMsg && (
+                <p className={cn(
+                  'text-[11px] max-w-[220px] text-right',
+                  backupMsg.type === 'error' ? 'text-red-500' : 'text-emerald-600 dark:text-emerald-400',
+                )}>
+                  {backupMsg.text}
+                </p>
+              )}
             </div>
           </SettingItem>
         </SettingSection>
 
+        <ConfirmModal
+          open={confirmImport}
+          title="Importar respaldo"
+          message="Se reemplazará toda la información actual (biblioteca, canciones, presentaciones, fondos) con el contenido del archivo que elijas. Se creará un respaldo de seguridad automático antes de continuar, y la app se reiniciará al terminar. ¿Continuar?"
+          confirmLabel="Elegir archivo e importar"
+          onConfirm={runImport}
+          onCancel={() => setConfirmImport(false)}
+        />
+
         {/* General */}
         <SettingSection icon={<GlobeIcon />} title="General">
-          <SettingItem 
-            label="Idioma" 
-            description="Idioma de la interfaz"
+          <SettingItem
+            label="Idioma"
+            description="Por ahora Open Screen solo está disponible en español"
           >
-            <Select
-              value={settings.language}
-              onChange={(e) => updateSetting('language', e.target.value)}
-              className="w-36"
-            >
+            <Select value="es" disabled className="w-36">
               <option value="es">Español</option>
-              <option value="en">English</option>
-              <option value="pt">Português</option>
             </Select>
           </SettingItem>
 
@@ -551,18 +851,18 @@ export function SettingsPage() {
             description="Notificar cuando haya nueva versión"
           >
             <Toggle
-              checked={settings.checkUpdates}
-              onChange={(val) => updateSetting('checkUpdates', val)}
+              checked={settings.check_updates}
+              onChange={(val) => updateSetting('check_updates', val)}
             />
           </SettingItem>
 
-          <SettingItem 
-            label="Iniciar con el sistema" 
+          <SettingItem
+            label="Iniciar con el sistema"
             description="Abrir Open Screen al encender el equipo"
           >
             <Toggle
-              checked={settings.startOnLogin}
-              onChange={(val) => updateSetting('startOnLogin', val)}
+              checked={settings.start_on_login}
+              onChange={(val) => updateSetting('start_on_login', val)}
             />
           </SettingItem>
         </SettingSection>
@@ -572,7 +872,7 @@ export function SettingsPage() {
           <div className="space-y-3 text-sm">
             <div className="flex justify-between">
               <span className="text-slate-600 dark:text-slate-400">Versión</span>
-              <span className="font-mono text-slate-900 dark:text-slate-100">1.0.0</span>
+              <span className="font-mono text-slate-900 dark:text-slate-100">{appVersion ?? '—'}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-600 dark:text-slate-400">Licencia</span>
