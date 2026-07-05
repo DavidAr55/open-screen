@@ -28,6 +28,8 @@ const NAV_ITEMS = [
   { label: 'Canciones', icon: <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg> },
   { label: 'Escrituras', icon: <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> },
   { label: 'Presentaciones', icon: <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg> },
+  { label: 'Multimedia', icon: <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg> },
+  { label: 'Escenario', icon: <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M2 3h20v12H2z"/><path d="M8 21h8M12 15v6"/><circle cx="12" cy="9" r="3"/></svg> },
 ]
 
 // ─── Menú contextual ──────────────────────────────────────────────────────────
@@ -131,6 +133,7 @@ function LibraryItem({ item, index, isSelected, isActive, selectedIds, projectio
 
   return (
     <div
+      id={`lib-item-${item.id}`}
       draggable
       onDragStart={() => onDragStart(index)}
       onDragOver={(e) => { e.preventDefault(); onDragOver(index) }}
@@ -179,7 +182,8 @@ function LibraryItem({ item, index, isSelected, isActive, selectedIds, projectio
 
 // ─── Sidebar principal ────────────────────────────────────────────────────────
 export function Sidebar() {
-  const { activePage, setActivePage, library, libLoading, deleteItem, deleteMany, project, liveBg, projectionClickMode } = useApp()
+  const { activePage, setActivePage, library, libLoading, deleteItem, deleteMany, project, projectionClickMode,
+          pendingSelection, clearPendingSelection } = useApp()
 
   const [search,     setSearch]     = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
@@ -206,6 +210,20 @@ export function Sidebar() {
       return [...validIds, ...newIds]
     })
   }, [library])
+
+  // ── Deep-link del buscador global: resaltar el ítem en la biblioteca ──────
+  useEffect(() => {
+    if (pendingSelection?.type !== 'library') return
+    const itemId = pendingSelection.payload.itemId
+    setActiveId(itemId)
+    // Limpiar filtros que podrían ocultar el ítem y llevarlo a la vista
+    setSearch('')
+    setTypeFilter('all')
+    requestAnimationFrame(() => {
+      document.getElementById(`lib-item-${itemId}`)?.scrollIntoView({ block: 'nearest' })
+    })
+    clearPendingSelection()
+  }, [pendingSelection]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const filteredItems = useMemo(() => {
     const filtered = library.filter(item => {
@@ -237,9 +255,9 @@ export function Sidebar() {
 
   // ── Proyectar ──────────────────────────────────────────────────────────────
   const handleProject = useCallback((item) => {
-    project(item.content, liveBg)
+    project(item.content)
     setActiveId(item.id)
-  }, [project, liveBg])
+  }, [project])
 
   // ── Eliminar ───────────────────────────────────────────────────────────────
   const handleDelete = useCallback(async (id) => {

@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useApp } from '../context/AppContext.jsx'
 import { Button, Card, Input, Select, SectionLabel, Spinner } from '@shared/components/ui/index.jsx'
+import { DEFAULT_BG } from '@shared/constants/defaultBackground.js'
+import { watermarkPreviewStyle } from '@shared/constants/watermark.js'
+import { buildFontFamily } from '@shared/utils/font.js'
 import { cn } from '@shared/utils/cn.js'
 
 // ─── Iconos ───────────────────────────────────────────────────────────────────
@@ -15,12 +18,6 @@ const MODES = [
   { id: 'navigate', label: 'Navegar' },
   { id: 'search',   label: 'Buscar'  },
 ]
-
-const BG_STYLES = {
-  dark:  'radial-gradient(ellipse at 50% 35%, #1c0a0a, #000)',
-  red:   'radial-gradient(ellipse at 50% 30%, #4a0808, #1a0000)',
-  black: '#000',
-}
 
 // ─── Context Menu ─────────────────────────────────────────────────────────────
 function ContextMenu({ x, y, verse, onProject, onSave, onCopy, onClose }) {
@@ -199,7 +196,9 @@ function VerseItem({ verse, isSelected, onSelect, onProject, onSave, searchQuery
 
 // ─── Página principal ─────────────────────────────────────────────────────────
 export function ScripturePage() {
-  const { project, liveBg, activeBg, createItem, refreshLibrary, isNavNext, isNavPrev } = useApp()
+  const { project, activeBg, createItem, refreshLibrary, isNavNext, isNavPrev,
+          defaultBibleModule, showVerseNumbers, setNextText,
+          pendingSelection, clearPendingSelection } = useApp()
 
   const [mode,     setMode]     = useState('navigate')
   const [modules,  setModules]  = useState([])
@@ -225,6 +224,11 @@ export function ScripturePage() {
   const [saveMsg, setSaveMsg] = useState(null) // 'ok' | 'error' | null
   const saveMsgTimer = useRef(null)
 
+  // Deep-link del buscador global: objetivo pendiente {bookId, chapter, verse}.
+  // "Cabalga" la cadena de effects existente (módulo → libros → capítulo → versos)
+  // sin duplicarla: cada effect consulta este ref para decidir qué seleccionar.
+  const deepLinkRef = useRef(null)
+
   // ── Cargar módulos ──────────────────────────────────────────────────────────
   useEffect(() => {
     async function load() {
@@ -232,18 +236,51 @@ export function ScripturePage() {
       try {
         const mods = await window.api?.bible.listModules() ?? []
         setModules(mods)
-        if (mods.length > 0) setModuleId(mods[0].id)
+        if (mods.length > 0) {
+          const preferred = mods.find(m => m.id === defaultBibleModule)
+          setModuleId((preferred ?? mods[0]).id)
+        }
       } finally { setLoading(false) }
     }
     load()
   }, [])
+
+  // ── Deep-link del buscador global (referencia o versículo) ─────────────────
+  useEffect(() => {
+    if (pendingSelection?.type !== 'verseRef' && pendingSelection?.type !== 'verse') return
+    const { moduleId: targetModule, bookId, chapter, verse } = pendingSelection.payload
+    deepLinkRef.current = { bookId, chapter, verse }
+    setMode('navigate')
+    if (targetModule && targetModule !== moduleId) {
+      // Cambiar de módulo re-dispara la cadena completa (libros → versos)
+      setModuleId(targetModule)
+    } else if (books.length > 0) {
+      // Mismo módulo: seleccionar libro y capítulo directamente
+      const book = books.find(b => b.id === bookId)
+      if (!book) { deepLinkRef.current = null; clearPendingSelection(); return }
+      if (book.id === selectedBook?.id && chapter === selectedChapter) {
+        // Ya estamos en ese capítulo (la cadena no se re-dispara):
+        // seleccionar el versículo sobre los versos ya cargados
+        if (verse != null) setSelectedVerse(verses.find(v => v.verse === verse) ?? verses[0] ?? null)
+        deepLinkRef.current = null
+        clearPendingSelection()
+      } else {
+        setSelectedBook(book)
+        setSelectedChapter(chapter)
+      }
+    }
+  }, [pendingSelection]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Libros al cambiar módulo ────────────────────────────────────────────────
   useEffect(() => {
     if (!moduleId) return
     window.api?.bible.getBooks(moduleId).then(b => {
       setBooks(b ?? [])
-      if (b?.length > 0) { setSelectedBook(b[0]); setSelectedChapter(1) }
+      // Si hay un deep-link pendiente, seleccionar su libro objetivo en vez del primero
+      const target = deepLinkRef.current
+      const book = target ? b?.find(x => x.id === target.bookId) : null
+      if (book) { setSelectedBook(book); setSelectedChapter(target.chapter) }
+      else if (b?.length > 0) { setSelectedBook(b[0]); setSelectedChapter(1) }
     })
   }, [moduleId])
 
@@ -258,9 +295,16 @@ export function ScripturePage() {
     if (!moduleId || !selectedBook) return
     window.api?.bible.getChapter(moduleId, selectedBook.id, selectedChapter).then(vs => {
       setVerses(vs ?? [])
-      setSelectedVerse(vs?.[0] ?? null)
+      // Último eslabón del deep-link: seleccionar el versículo objetivo y limpiar
+      const target = deepLinkRef.current
+      if (target?.verse != null) {
+        setSelectedVerse(vs?.find(x => x.verse === target.verse) ?? vs?.[0] ?? null)
+      } else {
+        setSelectedVerse(vs?.[0] ?? null)
+      }
+      if (target) { deepLinkRef.current = null; clearPendingSelection() }
     })
-  }, [moduleId, selectedBook, selectedChapter])
+  }, [moduleId, selectedBook, selectedChapter]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Búsqueda con debounce ──────────────────────────────────────────────────
   useEffect(() => {
@@ -279,10 +323,11 @@ export function ScripturePage() {
 
   // ── Proyectar ──────────────────────────────────────────────────────────────
   const projectVerse = useCallback((verse) => {
-    const text = `${verse.text}\n\n— ${verse.reference}`
-    project(text, liveBg)
+    const body = showVerseNumbers ? `${verse.verse}. ${verse.text}` : verse.text
+    const text = `${body}\n\n— ${verse.reference}`
+    project(text)
     setSelectedVerse(verse)
-  }, [project, liveBg])
+  }, [project, showVerseNumbers])
 
   // ── Guardar en biblioteca ──────────────────────────────────────────────────
   const saveVerse = useCallback(async (verse) => {
@@ -301,6 +346,15 @@ export function ScripturePage() {
       saveMsgTimer.current = setTimeout(() => setSaveMsg(null), 2500)
     }
   }, [refreshLibrary])
+
+  // ── Actualiza la vista previa de "lo próximo" para el panel de Escenario ───
+  useEffect(() => {
+    const list = mode === 'navigate' ? verses : searchResults
+    if (!selectedVerse || list.length === 0) { setNextText(''); return }
+    const idx  = list.findIndex(v => v.id === selectedVerse.id)
+    const next = list[idx + 1]
+    setNextText(next ? next.reference : '')
+  }, [mode, verses, searchResults, selectedVerse, setNextText])
 
   // ── Navegación con proyección automática ───────────────────────────────────
   const goToVerse = useCallback((verse) => {
@@ -534,7 +588,7 @@ export function ScripturePage() {
           <>
             {/* Preview — ocupa el espacio disponible, nunca más de 55vh */}
             <div className="flex-1 min-h-0 max-h-[55vh]">
-              <VersePreview verse={selectedVerse} liveBg={liveBg} activeBg={activeBg} />
+              <VersePreview verse={selectedVerse} activeBg={activeBg} />
             </div>
 
             {/* Referencia + texto */}
@@ -638,8 +692,9 @@ export function ScripturePage() {
 }
 
 // ─── Preview 16:9 ────────────────────────────────────────────────────────────
-function VersePreview({ verse, liveBg, activeBg }) {
-  const effectiveBg = activeBg ?? { type: 'gradient', value: BG_STYLES[liveBg] ?? BG_STYLES.dark }
+function VersePreview({ verse, activeBg }) {
+  const { projectionFontFamily, watermark } = useApp()
+  const effectiveBg = activeBg ?? DEFAULT_BG
   const isMedia = effectiveBg.type === 'image' || effectiveBg.type === 'gif' || effectiveBg.type === 'video'
   return (
     <div className="slide-canvas w-full h-full">
@@ -659,15 +714,20 @@ function VersePreview({ verse, liveBg, activeBg }) {
       <span className="absolute top-2.5 left-3 font-mono text-[10px] text-white/20 tracking-wider select-none">PREVIEW</span>
       <div className="absolute inset-0 flex flex-col items-center justify-center p-8 gap-3 overflow-hidden">
         <p className="text-white font-bold text-center leading-snug whitespace-pre-wrap transition-all"
-          style={{ fontSize: 'clamp(12px, 2.8vw, 28px)', textShadow: '0 2px 24px rgba(0,0,0,.8)',
+          style={{ fontFamily: buildFontFamily(projectionFontFamily), fontSize: 'clamp(12px, 2.8vw, 28px)', textShadow: '0 2px 24px rgba(0,0,0,.8)',
             maxWidth: '100%', overflowWrap: 'break-word' }}>
           {verse.text}
         </p>
-        <p className="text-white/50 font-mono font-bold text-center"
-          style={{ fontSize: 'clamp(9px, 1.4vw, 14px)' }}>
-          — {verse.reference}
+        <p className="text-white/50 font-bold text-center"
+          style={{ fontFamily: buildFontFamily(projectionFontFamily), fontSize: 'clamp(9px, 1.4vw, 14px)' }}>
+          {verse.reference}
         </p>
       </div>
+
+      {watermark?.enabled && watermark.image && (
+        <img src={watermark.image} alt="" className="absolute pointer-events-none select-none"
+          style={watermarkPreviewStyle(watermark)} />
+      )}
     </div>
   )
 }

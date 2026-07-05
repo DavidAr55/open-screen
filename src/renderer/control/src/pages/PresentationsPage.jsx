@@ -293,7 +293,7 @@ function SlideCard({ dataUrl, index, isActive, isLive, onClick, onProject }) {
 
 // ─── Vista de proyección de presentación ──────────────────────────────────────
 function PresentationProjector({ pres, onBack }) {
-  const { isNavNext, isNavPrev } = useApp()
+  const { isNavNext, isNavPrev, setNextText } = useApp()
   const [slides, setSlides]     = useState([])   // array de dataURLs
   const [loading, setLoading]   = useState(true)
   const [progress, setProgress] = useState(0)
@@ -301,6 +301,12 @@ function PresentationProjector({ pres, onBack }) {
   const [liveIdx,   setLiveIdx]   = useState(-1)
   const [error, setError]         = useState(null)
   const pdfRef = useRef(null)
+
+  // Vista previa de "lo próximo" para el panel de Escenario
+  useEffect(() => {
+    if (liveIdx < 0 || liveIdx + 1 >= slides.length) { setNextText(''); return }
+    setNextText(`Diapositiva ${liveIdx + 2} de ${slides.length}`)
+  }, [liveIdx, slides.length, setNextText])
 
   // Cargar y renderizar todas las páginas
   useEffect(() => {
@@ -498,7 +504,7 @@ function PresentationProjector({ pres, onBack }) {
 
 // ─── Página principal ─────────────────────────────────────────────────────────
 export function PresentationsPage() {
-  const { refreshLibrary } = useApp()
+  const { refreshLibrary, pendingSelection, clearPendingSelection } = useApp()
   const [presentations, setPresentations] = useState([])
   const [loading,       setLoading]       = useState(true)
   const [importing,     setImporting]     = useState(false)
@@ -567,6 +573,16 @@ export function PresentationsPage() {
     setActivePres(pres)
     setView('project')
   }
+
+  // ── Deep-link del buscador global: abrir en modo proyector ─────────────────
+  useEffect(() => {
+    if (pendingSelection?.type !== 'presentation') return
+    (async () => {
+      const pres = await window.api?.presentations.findById(pendingSelection.payload.presId)
+      if (pres) handleProject(pres)
+      clearPendingSelection()
+    })()
+  }, [pendingSelection]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (view === 'project' && activePres) {
     return (
