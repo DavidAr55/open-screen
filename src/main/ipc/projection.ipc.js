@@ -21,4 +21,19 @@ export function registerProjectionIPC(windowManager) {
   ipcMain.on('projection:freeze', (_e, frozen) => {
     windowManager.sendToProjection('projection:freeze', { frozen })
   })
+
+  // Actualizar la fuente en caliente, sin esperar a la próxima diapositiva
+  ipcMain.on('projection:setFont', (_e, fontName) => {
+    windowManager.sendToProjection('projection:setFont', fontName)
+  })
+
+  // Actualizar el tamaño de fuente en caliente, sin esperar a la próxima diapositiva
+  ipcMain.on('projection:setFontSize', (_e, fontSizeMode) => {
+    windowManager.sendToProjection('projection:setFontSize', fontSizeMode)
+  })
+
+  // Actualizar la marca de agua en caliente
+  ipcMain.on('projection:setWatermark', (_e, watermark) => {
+    windowManager.sendToProjection('projection:setWatermark', watermark)
+  })
 }
