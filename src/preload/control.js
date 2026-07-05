@@ -1,10 +1,16 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
 contextBridge.exposeInMainWorld('api', {
+  app: {
+    getVersion: () => ipcRenderer.invoke('app:getVersion'),
+  },
   projection: {
-    send:   (payload) => ipcRenderer.send('projection:send', payload),
-    clear:  ()        => ipcRenderer.send('projection:clear'),
-    freeze: (frozen)  => ipcRenderer.send('projection:freeze', frozen),
+    send:         (payload)   => ipcRenderer.send('projection:send', payload),
+    clear:        ()          => ipcRenderer.send('projection:clear'),
+    freeze:       (frozen)    => ipcRenderer.send('projection:freeze', frozen),
+    setFont:      (fontName)  => ipcRenderer.send('projection:setFont', fontName),
+    setFontSize:  (mode)      => ipcRenderer.send('projection:setFontSize', mode),
+    setWatermark: (watermark) => ipcRenderer.send('projection:setWatermark', watermark),
   },
   library: {
     findAll:  (filters)    => ipcRenderer.invoke('library:findAll', filters),
@@ -21,7 +27,12 @@ contextBridge.exposeInMainWorld('api', {
     setMany: (entries)     => ipcRenderer.invoke('settings:setMany', entries),
   },
   displays: {
-    getAll: () => ipcRenderer.invoke('displays:getAll'),
+    getAll:          ()      => ipcRenderer.invoke('displays:getAll'),
+    setActiveMonitor: (pref) => ipcRenderer.invoke('displays:setActiveMonitor', pref),
+  },
+  backup: {
+    export: () => ipcRenderer.invoke('backup:export'),
+    import: () => ipcRenderer.invoke('backup:import'),
   },
   bible: {
     listModules:     ()                      => ipcRenderer.invoke('bible:listModules'),
@@ -42,6 +53,8 @@ contextBridge.exposeInMainWorld('api', {
     toggleFavorite: (id)       => ipcRenderer.invoke('songs:toggleFavorite', id),
     getArtists:     ()         => ipcRenderer.invoke('songs:getArtists'),
     count:          ()         => ipcRenderer.invoke('songs:count'),
+    pickPptx:       ()         => ipcRenderer.invoke('songs:pickPptx'),
+    parsePptx:      (path)     => ipcRenderer.invoke('songs:parsePptx', path),
   },
   presentations: {
     findAll:        ()           => ipcRenderer.invoke('presentations:findAll'),
@@ -66,5 +79,26 @@ contextBridge.exposeInMainWorld('api', {
     pickFile:        ()         => ipcRenderer.invoke('backgrounds:pickFile'),
     importConfirmed: (data)     => ipcRenderer.invoke('backgrounds:importConfirmed', data),
     setActive:       (payload)  => ipcRenderer.send('backgrounds:setActive', payload),
+  },
+  multimedia: {
+    findAll:        (type)      => ipcRenderer.invoke('multimedia:findAll', type),
+    findById:       (id)        => ipcRenderer.invoke('multimedia:findById', id),
+    import:         ()          => ipcRenderer.invoke('multimedia:import'),
+    update:         (id, data)  => ipcRenderer.invoke('multimedia:update', id, data),
+    delete:         (id)        => ipcRenderer.invoke('multimedia:delete', id),
+    toggleFavorite: (id)        => ipcRenderer.invoke('multimedia:toggleFavorite', id),
+    openDir:        ()          => ipcRenderer.invoke('multimedia:openDir'),
+    project:        (payload)   => ipcRenderer.send('multimedia:project', payload),
+    clear:          ()          => ipcRenderer.send('multimedia:clear'),
+    mediaControl:   (payload)   => ipcRenderer.send('multimedia:mediaControl', payload),
+  },
+  search: {
+    global: (query, opts) => ipcRenderer.invoke('search:global', query, opts),
+  },
+  fonts: {
+    getAll: () => ipcRenderer.invoke('fonts:getAll'),
+  },
+  watermark: {
+    pickImage: () => ipcRenderer.invoke('watermark:pickImage'),
   },
 })
