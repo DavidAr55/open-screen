@@ -236,5 +236,86 @@ export const SCHEMA = {
 
     CREATE INDEX IF NOT EXISTS idx_backgrounds_type ON backgrounds(type);
     CREATE INDEX IF NOT EXISTS idx_backgrounds_fav  ON backgrounds(is_favorite);
+  `,
+
+  // ────────────────────────────────────────────────────────────────
+  //  v7 — Multimedia (imágenes, GIFs y videos para proyectar directo)
+  // ────────────────────────────────────────────────────────────────
+  v7: `
+    ALTER TABLE media ADD COLUMN thumbnail   TEXT;
+    ALTER TABLE media ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE media ADD COLUMN updated_at  TEXT DEFAULT (datetime('now'));
+
+    CREATE INDEX IF NOT EXISTS idx_media_type ON media(type);
+    CREATE INDEX IF NOT EXISTS idx_media_fav  ON media(is_favorite);
+  `,
+
+  // ────────────────────────────────────────────────────────────────
+  //  v8 — Índice de búsqueda global (FTS5 para canciones)
+  //
+  //  Tabla FTS5 normal (no content=) porque indexa datos de 2 tablas:
+  //  songs (title, artist) + song_sections (lyrics concatenadas).
+  //  remove_diacritics 2 → "corazon" encuentra "Corazón".
+  //  Sincronizada por triggers con DELETE + INSERT…SELECT; el re-indexado
+  //  de secciones hace JOIN a songs, así el borrado en cascada no reinserta.
+  // ────────────────────────────────────────────────────────────────
+  v8: `
+    CREATE VIRTUAL TABLE IF NOT EXISTS songs_fts USING fts5(
+      title, artist, lyrics,
+      tokenize = 'unicode61 remove_diacritics 2'
+    );
+
+    -- Poblado inicial desde los datos existentes
+    INSERT INTO songs_fts(rowid, title, artist, lyrics)
+      SELECT s.id, s.title, COALESCE(s.artist,''),
+             COALESCE((SELECT group_concat(sec.lyrics,' ')
+                       FROM song_sections sec WHERE sec.song_id = s.id), '')
+      FROM songs s;
+
+    -- Canción nueva: aún no tiene secciones, se indexa con letra vacía
+    CREATE TRIGGER IF NOT EXISTS songs_fts_ai AFTER INSERT ON songs BEGIN
+      INSERT INTO songs_fts(rowid, title, artist, lyrics)
+      VALUES (new.id, new.title, new.artist, '');
+    END;
+
+    -- Cambio de título/artista: re-indexa la canción completa
+    CREATE TRIGGER IF NOT EXISTS songs_fts_au AFTER UPDATE OF title, artist ON songs BEGIN
+      DELETE FROM songs_fts WHERE rowid = old.id;
+      INSERT INTO songs_fts(rowid, title, artist, lyrics)
+        SELECT new.id, new.title, new.artist,
+               COALESCE((SELECT group_concat(lyrics,' ') FROM song_sections WHERE song_id = new.id), '');
+    END;
+
+    -- Canción eliminada: sale del índice
+    CREATE TRIGGER IF NOT EXISTS songs_fts_ad AFTER DELETE ON songs BEGIN
+      DELETE FROM songs_fts WHERE rowid = old.id;
+    END;
+
+    -- Secciones: cualquier cambio re-indexa la canción completa.
+    -- El JOIN a songs cubre el borrado en cascada: si la canción ya no
+    -- existe, el SELECT no encuentra fila y no se reinserta nada.
+    CREATE TRIGGER IF NOT EXISTS song_sections_fts_ai AFTER INSERT ON song_sections BEGIN
+      DELETE FROM songs_fts WHERE rowid = new.song_id;
+      INSERT INTO songs_fts(rowid, title, artist, lyrics)
+        SELECT s.id, s.title, s.artist,
+               COALESCE((SELECT group_concat(lyrics,' ') FROM song_sections WHERE song_id = s.id), '')
+        FROM songs s WHERE s.id = new.song_id;
+    END;
+
+    CREATE TRIGGER IF NOT EXISTS song_sections_fts_au AFTER UPDATE OF lyrics ON song_sections BEGIN
+      DELETE FROM songs_fts WHERE rowid = new.song_id;
+      INSERT INTO songs_fts(rowid, title, artist, lyrics)
+        SELECT s.id, s.title, s.artist,
+               COALESCE((SELECT group_concat(lyrics,' ') FROM song_sections WHERE song_id = s.id), '')
+        FROM songs s WHERE s.id = new.song_id;
+    END;
+
+    CREATE TRIGGER IF NOT EXISTS song_sections_fts_ad AFTER DELETE ON song_sections BEGIN
+      DELETE FROM songs_fts WHERE rowid = old.song_id;
+      INSERT INTO songs_fts(rowid, title, artist, lyrics)
+        SELECT s.id, s.title, s.artist,
+               COALESCE((SELECT group_concat(lyrics,' ') FROM song_sections WHERE song_id = s.id), '')
+        FROM songs s WHERE s.id = old.song_id;
+    END;
   `
 }

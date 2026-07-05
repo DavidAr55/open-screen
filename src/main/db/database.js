@@ -5,6 +5,11 @@ import { SCHEMA } from './schema.js'
 
 let _db = null
 
+/** Ruta del archivo principal de la base de datos (userData de Electron). */
+export function getDbPath() {
+  return join(app.getPath('userData'), 'open-screen.db')
+}
+
 /**
  * Inicializa la conexión SQLite y corre el schema si es primera vez.
  * La base de datos vive en el userData de Electron (nunca en el código).
@@ -14,7 +19,7 @@ let _db = null
 export function initDatabase() {
   if (_db) return _db
 
-  const dbPath = join(app.getPath('userData'), 'open-screen.db')
+  const dbPath = getDbPath()
 
   _db = new Database(dbPath)
 
@@ -34,6 +39,11 @@ export function getDatabase() {
   return _db
 }
 
+/** Cierra la conexión activa (usado antes de restaurar un respaldo). */
+export function closeDatabase() {
+  if (_db) { _db.close(); _db = null }
+}
+
 // ── Migraciones simples basadas en user_version ────────────────────────────
 function runMigrations(db) {
   const currentVersion = db.pragma('user_version', { simple: true })
@@ -45,6 +55,8 @@ function runMigrations(db) {
     { version: 4, sql: SCHEMA.v4 },
     { version: 5, sql: SCHEMA.v5 },
     { version: 6, sql: SCHEMA.v6 },
+    { version: 7, sql: SCHEMA.v7 },
+    { version: 8, sql: SCHEMA.v8 },
   ]
 
   for (const migration of migrations) {
