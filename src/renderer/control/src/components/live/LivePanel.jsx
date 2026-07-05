@@ -1,10 +1,12 @@
 import { useApp } from '../../context/AppContext.jsx'
 import { Card, SectionLabel, LiveBadge } from '@shared/components/ui/index.jsx'
-import { BG_STYLES } from '../editor/SlideEditor.jsx'
+import { DEFAULT_BG } from '@shared/constants/defaultBackground.js'
+import { watermarkPreviewStyle } from '@shared/constants/watermark.js'
+import { buildFontFamily } from '@shared/utils/font.js'
 import { cn } from '@shared/utils/cn.js'
 
 export function LivePanel() {
-  const { isLive, liveText, activeBg, projCount, library, displays, project } = useApp()
+  const { isLive, liveText, activeBg, projCount, library, displays, project, projectionFontFamily, watermark } = useApp()
 
   const secondary = displays.find(d => !d.isPrimary)
   const outputLabel = secondary
@@ -13,9 +15,12 @@ export function LivePanel() {
 
   // Preview usa activeBg si existe, sino el preset dark
   const thumbStyle = (() => {
-    if (!activeBg) return { background: BG_STYLES.dark }
+    if (!activeBg) return { background: DEFAULT_BG.value }
     if (activeBg.type === 'color' || activeBg.type === 'gradient' || activeBg.type === 'css') return { background: activeBg.value }
     if ((activeBg.type === 'image' || activeBg.type === 'gif') && activeBg.thumbnail) {
+      return { backgroundImage: `url(${activeBg.thumbnail})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+    }
+    if (activeBg.type === 'video' && activeBg.thumbnail) {
       return { backgroundImage: `url(${activeBg.thumbnail})`, backgroundSize: 'cover', backgroundPosition: 'center' }
     }
     return { background: '#111' }
@@ -44,11 +49,15 @@ export function LivePanel() {
                 'font-bold text-center leading-tight whitespace-pre-wrap transition-colors',
                 isLive ? 'text-white' : 'text-white/15',
               )}
-              style={{ fontSize: '7px' }}
+              style={{ fontFamily: buildFontFamily(projectionFontFamily), fontSize: '7px' }}
             >
               {isLive ? liveText : '— vacío —'}
             </p>
           </div>
+          {watermark?.enabled && watermark.image && (
+            <img src={watermark.image} alt="" className="absolute pointer-events-none select-none"
+              style={watermarkPreviewStyle(watermark, 3)} />
+          )}
         </div>
 
         <p className="text-[11px] text-slate-400 dark:text-slate-600">

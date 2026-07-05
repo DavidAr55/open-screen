@@ -4,7 +4,7 @@ import { SectionLabel } from '@shared/components/ui/index.jsx'
 import { cn } from '@shared/utils/cn.js'
 
 export function QuickGrid() {
-  const { library, project, liveBg, projectionClickMode } = useApp()
+  const { library, project, projectionClickMode } = useApp()
   const [selectedId, setSelectedId] = useState(null)
   const clickTimers = useRef({})
   const items = library.slice(0, 6)
@@ -12,13 +12,13 @@ export function QuickGrid() {
   const handleClick = (item) => {
     if (projectionClickMode === 'single') {
       setSelectedId(item.id)
-      project(item.content, liveBg)
+      project(item.content)
       return
     }
     if (clickTimers.current[item.id] !== undefined) {
       clearTimeout(clickTimers.current[item.id])
       delete clickTimers.current[item.id]
-      project(item.content, liveBg)
+      project(item.content)
     } else {
       setSelectedId(item.id)
       clickTimers.current[item.id] = setTimeout(() => { delete clickTimers.current[item.id] }, 240)

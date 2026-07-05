@@ -1,23 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useApp } from '../../context/AppContext.jsx'
 import { useLibrary } from '../../hooks/useLibrary.js'
-import { Button, Textarea, Select, SectionLabel, Card } from '@shared/components/ui/index.jsx'
+import { Button, Textarea, SectionLabel, Card, LiveBadge } from '@shared/components/ui/index.jsx'
+import { DEFAULT_BG } from '@shared/constants/defaultBackground.js'
+import { watermarkPreviewStyle } from '@shared/constants/watermark.js'
+import { buildFontFamily } from '@shared/utils/font.js'
 import { cn } from '@shared/utils/cn.js'
 
-const BG_OPTIONS = [
-  { value: 'dark',  label: 'Fondo oscuro' },
-  { value: 'red',   label: 'Fondo rojo'   },
-  { value: 'black', label: 'Negro puro'   },
-]
-
-export const BG_STYLES = {
-  dark:  'radial-gradient(ellipse at 50% 35%, #1c0a0a, #000)',
-  red:   'radial-gradient(ellipse at 50% 30%, #4a0808, #1a0000)',
-  black: '#000000',
-}
-
 export function SlideEditor() {
-  const { liveBg, setLiveBg, project, createItem, activeBg } = useApp()
+  const { project, createItem, activeBg, projectionFontFamily, watermark, isLive, liveText } = useApp()
   const { activeItem } = useLibrary()
 
   const [text, setText] = useState('')
@@ -30,7 +21,7 @@ export function SlideEditor() {
   const handleProject = () => {
     const trimmed = text.trim()
     if (!trimmed) return
-    project(trimmed, liveBg)
+    project(trimmed)
   }
 
   const handleSave = async () => {
@@ -40,65 +31,134 @@ export function SlideEditor() {
     await createItem({ title, content: trimmed, type: 'text' })
   }
 
-  // Espejo del fondo activo: usa activeBg del panel si existe, o el preset legacy
-  const effectiveBg = activeBg ?? { type: 'gradient', value: BG_STYLES[liveBg] ?? BG_STYLES.dark }
+  // Espejo del fondo activo, elegido en el editor de fondos (botón "Fondo" del Topbar)
+  const effectiveBg = activeBg ?? DEFAULT_BG
   const isMedia = effectiveBg.type === 'image' || effectiveBg.type === 'gif' || effectiveBg.type === 'video'
 
   return (
     <div className="flex flex-col gap-3 h-full">
 
-      {/* Preview 16:9 */}
-      <div className="slide-canvas w-full max-w-2xl mx-auto animate-fade-up">
-        {/* Fondo: color / gradiente */}
-        {!isMedia && (
-          <div className="absolute inset-0 transition-all duration-500" style={{ background: effectiveBg.value }} />
-        )}
+      {/* Preview (borrador) + En vivo (lo que se está proyectando) lado a lado */}
+      <div className="grid grid-cols-2 gap-3 w-full max-w-4xl mx-auto animate-fade-up">
+        <div className="slide-canvas">
+          {/* Fondo: color / gradiente */}
+          {!isMedia && (
+            <div className="absolute inset-0 transition-all duration-500" style={{ background: effectiveBg.value }} />
+          )}
 
-        {/* Fondo: imagen / GIF */}
-        {(effectiveBg.type === 'image' || effectiveBg.type === 'gif') && (
-          <>
-            <img
-              src={effectiveBg.thumbnail || effectiveBg.value}
-              alt=""
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-            <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.38)' }} />
-          </>
-        )}
+          {/* Fondo: imagen / GIF */}
+          {(effectiveBg.type === 'image' || effectiveBg.type === 'gif') && (
+            <>
+              <img
+                src={effectiveBg.thumbnail || effectiveBg.value}
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.38)' }} />
+            </>
+          )}
 
-        {/* Fondo: video */}
-        {effectiveBg.type === 'video' && (
-          <>
-            <video
-              key={effectiveBg.value}
-              src={effectiveBg.value}
-              loop
-              muted
-              autoPlay
-              playsInline
-              onCanPlay={e => e.target.play().catch(() => {})}
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-            <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.4)' }} />
-          </>
-        )}
+          {/* Fondo: video */}
+          {effectiveBg.type === 'video' && (
+            <>
+              <video
+                key={effectiveBg.value}
+                src={effectiveBg.value}
+                loop
+                muted
+                autoPlay
+                playsInline
+                onCanPlay={e => e.target.play().catch(() => {})}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.4)' }} />
+            </>
+          )}
 
-        <span className="absolute top-2.5 left-3 font-mono text-[10px] text-white/20 tracking-wider select-none">
-          PREVIEW
-        </span>
-        <div className="absolute inset-0 flex items-center justify-center p-8">
-          <p
-            className={cn(
-              'font-bold text-center leading-snug whitespace-pre-wrap transition-all',
-              text.trim() ? 'text-white' : 'text-white/20',
-            )}
-            style={{
-              fontSize: 'clamp(13px, 3vw, 30px)',
-              textShadow: '0 2px 24px rgba(0,0,0,.8)',
-            }}
-          >
-            {text.trim() || 'El texto aparecerá aquí'}
-          </p>
+          <span className="absolute top-2.5 left-3 font-mono text-[10px] text-white/20 tracking-wider select-none">
+            PREVIEW
+          </span>
+          <div className="absolute inset-0 flex items-center justify-center p-8">
+            <p
+              className={cn(
+                'font-bold text-center leading-snug whitespace-pre-wrap transition-all',
+                text.trim() ? 'text-white' : 'text-white/20',
+              )}
+              style={{
+                fontFamily: buildFontFamily(projectionFontFamily),
+                fontSize: 'clamp(13px, 3vw, 30px)',
+                textShadow: '0 2px 24px rgba(0,0,0,.8)',
+              }}
+            >
+              {text.trim() || 'El texto aparecerá aquí'}
+            </p>
+          </div>
+
+          {watermark?.enabled && watermark.image && (
+            <img src={watermark.image} alt="" className="absolute pointer-events-none select-none"
+              style={watermarkPreviewStyle(watermark)} />
+          )}
+        </div>
+
+        <div className="slide-canvas">
+          {/* Fondo: color / gradiente */}
+          {!isMedia && (
+            <div className="absolute inset-0 transition-all duration-500" style={{ background: effectiveBg.value }} />
+          )}
+
+          {/* Fondo: imagen / GIF */}
+          {(effectiveBg.type === 'image' || effectiveBg.type === 'gif') && (
+            <>
+              <img
+                src={effectiveBg.thumbnail || effectiveBg.value}
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.38)' }} />
+            </>
+          )}
+
+          {/* Fondo: video */}
+          {effectiveBg.type === 'video' && (
+            <>
+              <video
+                key={effectiveBg.value}
+                src={effectiveBg.value}
+                loop
+                muted
+                autoPlay
+                playsInline
+                onCanPlay={e => e.target.play().catch(() => {})}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.4)' }} />
+            </>
+          )}
+
+          <div className="absolute top-2.5 left-3 flex items-center gap-1.5">
+            <span className="font-mono text-[10px] text-white/20 tracking-wider select-none">EN VIVO</span>
+            <LiveBadge live={isLive} />
+          </div>
+          <div className="absolute inset-0 flex items-center justify-center p-8">
+            <p
+              className={cn(
+                'font-bold text-center leading-snug whitespace-pre-wrap transition-all',
+                isLive ? 'text-white' : 'text-white/20',
+              )}
+              style={{
+                fontFamily: buildFontFamily(projectionFontFamily),
+                fontSize: 'clamp(13px, 3vw, 30px)',
+                textShadow: '0 2px 24px rgba(0,0,0,.8)',
+              }}
+            >
+              {isLive ? liveText : '— vacío —'}
+            </p>
+          </div>
+
+          {watermark?.enabled && watermark.image && (
+            <img src={watermark.image} alt="" className="absolute pointer-events-none select-none"
+              style={watermarkPreviewStyle(watermark)} />
+          )}
         </div>
       </div>
 
@@ -120,15 +180,6 @@ export function SlideEditor() {
           </Button>
 
           <div className="ml-auto flex items-center gap-2">
-            <Select
-              value={liveBg}
-              onChange={e => setLiveBg(e.target.value)}
-            >
-              {BG_OPTIONS.map(o => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </Select>
-
             <Button size="lg" onClick={handleProject} disabled={!text.trim()}>
               <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <polygon points="5 3 19 12 5 21 5 3"/>
