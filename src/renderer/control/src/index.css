@@ -17,9 +17,11 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  /* Velocidad de animaciones */
-  html.anim-slow * { transition-duration: 450ms; }
-  html.anim-fast * { transition-duration: 75ms;  }
+  /* Velocidad de animaciones — !important necesario: sin esto, cualquier
+     utilidad duration-* de Tailwind (capa "utilities", posterior a "base")
+     gana el empate de especificidad y la anula. */
+  html.anim-slow * { transition-duration: 450ms !important; }
+  html.anim-fast * { transition-duration: 75ms  !important; }
 
   /* Scrollbar minimalista */
   ::-webkit-scrollbar         { width: 4px; height: 4px; }
