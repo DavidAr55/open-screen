@@ -1,8 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useApp } from '../context/AppContext.jsx'
 import { Button, Card, Input, Select, SectionLabel, Spinner } from '@shared/components/ui/index.jsx'
+import { DEFAULT_BG } from '@shared/constants/defaultBackground.js'
+import { watermarkPreviewStyle } from '@shared/constants/watermark.js'
+import { buildFontFamily } from '@shared/utils/font.js'
 import { cn } from '@shared/utils/cn.js'
 import { ConfirmModal } from '@shared/components/ConfirmModal.jsx'
+import { PptxImportView } from '../components/songs/PptxImportView.jsx'
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const SECTION_TYPES = [
@@ -20,12 +24,6 @@ const KEYS = [
   'C','C#','D','D#','E','F','F#','G','G#','A','A#','B',
   'Cm','C#m','Dm','D#m','Em','Fm','F#m','Gm','G#m','Am','A#m','Bm',
 ]
-
-const BG_MAP = {
-  dark:  'radial-gradient(ellipse at 50% 35%, #1c0a0a, #000)',
-  red:   'radial-gradient(ellipse at 50% 30%, #4a0808, #1a0000)',
-  black: '#000',
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const getSectionMeta = (type) =>
@@ -82,7 +80,9 @@ const UpIcon      = () => <svg width="11" height="11" fill="none" viewBox="0 0 2
 const DownIcon    = () => <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="m6 9 6 6 6-6"/></svg>
 const MusicIcon   = () => <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
 const SaveIcon    = () => <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-const BackIcon    = () => <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+const PanelIcon   = () => <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+const ChevronRightIcon = () => <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><polyline points="9 6 15 12 9 18"/></svg>
+const UploadIcon  = () => <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
 
 // ─── SectionBadge ─────────────────────────────────────────────────────────────
 function SectionBadge({ type, active, className }) {
@@ -501,193 +501,9 @@ function SongEditor({ song, onSave, onCancel }) {
   )
 }
 
-// ─── Proyector de canción ─────────────────────────────────────────────────────
-function SongProjector({ song, liveBg, activeBg, onBack }) {
-  const { project, isNavNext, isNavPrev, projectionClickMode } = useApp()
-  const allSections = buildAllSections(song)
-  const [activeIdx, setActiveIdx] = useState(0)
-  const clickTimers = useRef({})
-
-  const projectSection = useCallback((section, idx) => {
-    setActiveIdx(idx)
-    if (section._isTitleSlide) {
-      const text = section.lyrics
-      const sub = section._meta ? `— ${section._meta}` : ''
-      project(sub ? `${text}\n\n${sub}` : text, liveBg)
-    } else {
-      const sub = `— ${song.title}${song.artist ? ` · ${song.artist}` : ''}`
-      project(`${section.lyrics}\n\n${sub}`, liveBg)
-    }
-  }, [song, project, liveBg])
-
-  const handleSectionClick = (section, idx) => {
-    if (projectionClickMode === 'single') {
-      projectSection(section, idx)
-      return
-    }
-    if (clickTimers.current[idx] !== undefined) {
-      clearTimeout(clickTimers.current[idx])
-      delete clickTimers.current[idx]
-      projectSection(section, idx)
-    } else {
-      setActiveIdx(idx)
-      clickTimers.current[idx] = setTimeout(() => { delete clickTimers.current[idx] }, 240)
-    }
-  }
-
-  useEffect(() => {
-    if (allSections.length > 0) projectSection(allSections[0], 0)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [song.id])
-
-  useEffect(() => {
-    const handler = (e) => {
-      if (!isNavNext(e.key) && !isNavPrev(e.key)) return
-      e.preventDefault()
-      if (isNavNext(e.key)) {
-        const next = Math.min(activeIdx + 1, allSections.length - 1)
-        if (next !== activeIdx) projectSection(allSections[next], next)
-      } else {
-        const prev = Math.max(activeIdx - 1, 0)
-        if (prev !== activeIdx) projectSection(allSections[prev], prev)
-      }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [activeIdx, allSections, projectSection, isNavNext, isNavPrev])
-
-  const effectiveBg = activeBg ?? { type: 'gradient', value: BG_MAP[liveBg] ?? BG_MAP.dark }
-  const isMedia = effectiveBg.type === 'image' || effectiveBg.type === 'gif' || effectiveBg.type === 'video'
-  const activeSection = allSections[activeIdx]
-  const total = allSections.length
-
-  return (
-    <div className="flex-1 flex overflow-hidden gap-4 p-5">
-      <div className="w-64 flex-shrink-0 flex flex-col gap-3">
-        <div className="flex items-center gap-2">
-          <button onClick={onBack} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors flex-shrink-0">
-            <BackIcon />
-          </button>
-          <div className="flex-1 min-w-0">
-            <p className="font-bold text-[14px] text-slate-900 dark:text-white truncate">{song.title}</p>
-            {song.artist && <p className="text-[11px] text-slate-400 truncate">{song.artist}</p>}
-          </div>
-          {song.key_sig && (
-            <span className="text-[11px] font-mono font-bold bg-brand-50 dark:bg-brand-950/30 text-brand-600 dark:text-brand-400 px-2 py-1 rounded-lg border border-brand-200 dark:border-brand-900 flex-shrink-0">
-              {song.key_sig}
-            </span>
-          )}
-        </div>
-
-        <div className="flex-1 overflow-y-auto space-y-1.5">
-          {allSections.map((section, idx) => (
-            <button
-              key={idx}
-              onClick={() => handleSectionClick(section, idx)}
-              className={cn(
-                'w-full text-left p-3 rounded-xl border transition-all',
-                idx === activeIdx
-                  ? 'bg-brand-600 border-brand-700 text-white shadow-brand'
-                  : 'bg-white dark:bg-dark-surface border-surface-muted dark:border-dark-border hover:border-brand-200 dark:hover:border-brand-900',
-              )}
-            >
-              <div className="flex items-center gap-1.5 mb-1">
-                <SectionBadge type={section.type} active={idx === activeIdx} />
-                <span className={cn(
-                  'text-[11px] font-semibold truncate',
-                  idx === activeIdx ? 'text-white' : 'text-slate-700 dark:text-slate-300',
-                )}>
-                  {section.label}
-                </span>
-              </div>
-              <p className={cn('text-[11px] truncate', idx === activeIdx ? 'text-white/70' : 'text-slate-400')}>
-                {section._isTitleSlide ? (section._meta || section.lyrics) : (section.lyrics || '').split('\n')[0]}
-              </p>
-            </button>
-          ))}
-        </div>
-
-        <p className="text-[10px] text-slate-400 dark:text-slate-600 text-center">
-          {activeIdx + 1} / {total} · ← → para navegar
-        </p>
-      </div>
-
-      <div className="flex-1 flex flex-col gap-3">
-        <div className="slide-canvas" style={{ flex: '1', maxHeight: '60%' }}>
-          {!isMedia && <div className="absolute inset-0 transition-all duration-500" style={{ background: effectiveBg.value }} />}
-          {(effectiveBg.type === 'image' || effectiveBg.type === 'gif') && (
-            <>
-              <img src={effectiveBg.thumbnail || effectiveBg.value} alt="" className="absolute inset-0 w-full h-full object-cover" />
-              <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.38)' }} />
-            </>
-          )}
-          {effectiveBg.type === 'video' && (
-            <>
-              <video key={effectiveBg.value} src={effectiveBg.value} loop muted autoPlay playsInline onCanPlay={e => e.target.play().catch(() => {})} className="absolute inset-0 w-full h-full object-cover" />
-              <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.4)' }} />
-            </>
-          )}
-          <span className="absolute top-2.5 left-3 font-mono text-[10px] text-white/20 tracking-wider">PREVIEW</span>
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-8 gap-3 overflow-hidden">
-            {activeSection && (
-              <>
-                <p
-                  className="text-white font-bold text-center leading-snug whitespace-pre-wrap"
-                  style={{
-                    fontSize: 'clamp(11px, 2.5vw, 26px)',
-                    textShadow: '0 2px 24px rgba(0,0,0,.8)',
-                    maxWidth: '100%',
-                    overflowWrap: 'break-word',
-                  }}
-                >
-                  {activeSection.lyrics}
-                </p>
-                <p className="text-white/40 text-center" style={{ fontSize: 'clamp(8px, 1.1vw, 12px)' }}>
-                  {activeSection._isTitleSlide
-                    ? activeSection._meta
-                    : `${song.title}${song.artist ? ` · ${song.artist}` : ''}`}
-                </p>
-              </>
-            )}
-          </div>
-        </div>
-
-        <div className="flex gap-2 flex-shrink-0">
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={activeIdx <= 0}
-            onClick={() => {
-              const p = activeIdx - 1
-              projectSection(allSections[p], p)
-            }}
-          >
-            ← Anterior
-          </Button>
-          <div className="flex-1 text-center self-center">
-            <p className="text-[12px] text-slate-500 dark:text-slate-400 font-semibold">
-              {activeSection?.label ?? ''}
-            </p>
-          </div>
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={activeIdx >= total - 1}
-            onClick={() => {
-              const n = activeIdx + 1
-              projectSection(allSections[n], n)
-            }}
-          >
-            Siguiente →
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ─── Slide mini-preview (para el modo grid) ───────────────────────────────────
 function SlideGridCard({ section, isActive, index, total, onSelect, onProject, effectiveBg }) {
+  const { projectionFontFamily } = useApp()
   const lines = (section.lyrics || '').split('\n').length
   const fontSize = lines > 6 ? 5 : lines > 4 ? 6 : lines > 2 ? 7 : 9
   const isMedia = effectiveBg && (effectiveBg.type === 'image' || effectiveBg.type === 'gif' || effectiveBg.type === 'video')
@@ -713,7 +529,13 @@ function SlideGridCard({ section, isActive, index, total, onSelect, onProject, e
         </>
       )}
       {isMedia && effectiveBg.type === 'video' && (
-        <div className="absolute inset-0" style={{ background: '#000' }} />
+        <>
+          {effectiveBg.thumbnail
+            ? <img src={effectiveBg.thumbnail} alt="" className="absolute inset-0 w-full h-full object-cover" />
+            : <div className="absolute inset-0" style={{ background: '#000' }} />
+          }
+          <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.38)' }} />
+        </>
       )}
 
       <div className="absolute top-1.5 left-2 font-mono text-white/30 text-[8px] font-bold select-none">
@@ -729,7 +551,7 @@ function SlideGridCard({ section, isActive, index, total, onSelect, onProject, e
       <div className="absolute inset-0 flex flex-col items-center justify-center px-2 py-2 gap-0.5">
         <p
           className="text-white font-bold text-center leading-tight whitespace-pre-wrap"
-          style={{ fontSize: `${fontSize}px`, textShadow: '0 1px 6px rgba(0,0,0,.9)', maxWidth: '100%' }}
+          style={{ fontFamily: buildFontFamily(projectionFontFamily), fontSize: `${fontSize}px`, textShadow: '0 1px 6px rgba(0,0,0,.9)', maxWidth: '100%' }}
         >
           {section.lyrics}
         </p>
@@ -743,14 +565,20 @@ function SlideGridCard({ section, isActive, index, total, onSelect, onProject, e
 }
 
 // ─── Detalle de canción ───────────────────────────────────────────────────────
-function SongDetail({ song, liveBg, activeBg, onOpenProjector, onEdit, onDelete, onProjectSection, isLive, onClearLive }) {
-  const { isNavNext, isNavPrev, projectionClickMode } = useApp()
+function SongDetail({ song, activeBg, sidebarCollapsed, onToggleSidebar, onEdit, onDelete, onProjectSection, isLive, onClearLive }) {
+  const { isNavNext, isNavPrev, projectionClickMode, setNextText, projectionFontFamily, watermark } = useApp()
   const allSections = buildAllSections(song)
   const [activeIdx, setActiveIdx] = useState(0)
   const [detailView, setDetailView] = useState('list')
-  const effectiveBg = activeBg ?? { type: 'gradient', value: BG_MAP[liveBg] ?? BG_MAP.dark }
+  const effectiveBg = activeBg ?? DEFAULT_BG
   const isMedia = effectiveBg.type === 'image' || effectiveBg.type === 'gif' || effectiveBg.type === 'video'
   const activeSection = allSections[activeIdx]
+
+  // Vista previa de "lo próximo" para el panel de Escenario
+  useEffect(() => {
+    const next = allSections[activeIdx + 1]
+    setNextText(next ? (next._isTitleSlide ? song.title : (next.label || next.type)) : '')
+  }, [allSections, activeIdx, song.title, setNextText])
 
   const handleProjectSection = useCallback((section) => {
     if (!section) return
@@ -880,16 +708,16 @@ function SongDetail({ song, liveBg, activeBg, onOpenProjector, onEdit, onDelete,
           )}
 
           <button
-            onClick={() => onOpenProjector(song)}
-            title="Modo proyector completo (pantalla completa)"
-            className="p-2 text-slate-400 hover:text-brand-500 transition-colors rounded-lg hover:bg-brand-50 dark:hover:bg-brand-950/20"
+            onClick={onToggleSidebar}
+            title={sidebarCollapsed ? 'Mostrar buscador de canciones' : 'Ocultar buscador de canciones'}
+            className={cn(
+              'p-2 transition-colors rounded-lg',
+              sidebarCollapsed
+                ? 'text-brand-500 bg-brand-50 dark:bg-brand-950/20'
+                : 'text-slate-400 hover:text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-950/20',
+            )}
           >
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path d="M8 3H5a2 2 0 0 0-2 2v3" />
-              <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
-              <path d="M3 16v3a2 2 0 0 0 2 2h3" />
-              <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
-            </svg>
+            <PanelIcon />
           </button>
 
           <button
@@ -942,6 +770,7 @@ function SongDetail({ song, liveBg, activeBg, onOpenProjector, onEdit, onDelete,
                     <p
                       className="text-white font-bold text-center leading-snug whitespace-pre-wrap"
                       style={{
+                        fontFamily: buildFontFamily(projectionFontFamily),
                         fontSize: 'clamp(11px, 2.4vw, 24px)',
                         textShadow: '0 2px 24px rgba(0,0,0,.8)',
                         maxWidth: '100%',
@@ -950,12 +779,19 @@ function SongDetail({ song, liveBg, activeBg, onOpenProjector, onEdit, onDelete,
                     >
                       {activeSection.lyrics}
                     </p>
-                    <p className="text-white/40 text-center" style={{ fontSize: 'clamp(8px, 1vw, 12px)' }}>
-                      {activeSection._isTitleSlide ? activeSection._meta : `${song.title}${song.artist ? ` · ${song.artist}` : ''}`}
-                    </p>
+                    {activeSection._isTitleSlide && (
+                      <p className="text-white/40 text-center" style={{ fontFamily: buildFontFamily(projectionFontFamily), fontSize: 'clamp(8px, 1vw, 12px)' }}>
+                        {activeSection._meta}
+                      </p>
+                    )}
                   </>
                 )}
               </div>
+
+              {watermark?.enabled && watermark.image && (
+                <img src={watermark.image} alt="" className="absolute pointer-events-none select-none"
+                  style={watermarkPreviewStyle(watermark)} />
+              )}
             </div>
 
             <NavBar
@@ -1241,7 +1077,8 @@ function SongListItem({
 }
 
 export function SongsPage() {
-  const { project, liveBg, activeBg, isLive, clearProjection, refreshLibrary, isNavNext, isNavPrev } = useApp()
+  const { project, activeBg, isLive, clearProjection, refreshLibrary, isNavNext, isNavPrev,
+          pendingSelection, clearPendingSelection } = useApp()
 
   const [songs, setSongs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -1253,6 +1090,7 @@ export function SongsPage() {
   const [view, setView] = useState('list')
   const [activeSong, setActiveSong] = useState(null)
   const [editSong, setEditSong] = useState(null)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
   const [confirmModal, setConfirmModal] = useState(null)
 
@@ -1290,6 +1128,14 @@ export function SongsPage() {
     const full = await ipc.songs.findById(song.id)
     setActiveSong(full)
   }, [activeSong])
+
+  // ── Deep-link del buscador global ──────────────────────────────────────────
+  useEffect(() => {
+    if (pendingSelection?.type !== 'song') return
+    setView('list')
+    selectSong({ id: pendingSelection.payload.songId })
+    clearPendingSelection()
+  }, [pendingSelection]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSave = useCallback(async (data) => {
     try {
@@ -1359,8 +1205,15 @@ export function SongsPage() {
   const handleProject = useCallback(async (song) => {
     const full = await ipc.songs.findById(song.id)
     setActiveSong(full)
-    setView('project')
-  }, [])
+    const [first] = buildAllSections(full)
+    if (!first) return
+    if (first._isTitleSlide) {
+      const sub = first._meta ? `— ${first._meta}` : ''
+      project(sub ? `${first.lyrics}\n\n${sub}` : first.lyrics)
+    } else {
+      project(first.lyrics)
+    }
+  }, [project])
 
   const [dragFrom, setDragFrom] = useState(null)
   const [dragOver, setDragOver] = useState(null)
@@ -1402,11 +1255,19 @@ export function SongsPage() {
     )
   }
 
-  if (view === 'project' && activeSong) {
+  if (view === 'importPptx') {
     return (
-      <main className="flex-1 flex overflow-hidden">
-        <SongProjector song={activeSong} liveBg={liveBg} activeBg={activeBg} onBack={() => setView('list')} />
-      </main>
+      <PptxImportView
+        onCancel={() => setView('list')}
+        onDone={async (lastSong) => {
+          await load()
+          setView('list')
+          if (lastSong?.id) {
+            const full = await ipc.songs.findById(lastSong.id)
+            setActiveSong(full)
+          }
+        }}
+      />
     )
   }
 
@@ -1414,16 +1275,34 @@ export function SongsPage() {
     <main className="flex-1 flex overflow-hidden">
       {/* Panel izquierdo */}
       <div className={cn(
-        'w-72 flex-shrink-0 flex flex-col border-r overflow-hidden',
+        'flex-shrink-0 flex flex-col border-r overflow-hidden transition-all duration-200',
         'border-surface-muted dark:border-dark-border',
-        'bg-white dark:bg-dark-surface transition-colors',
+        'bg-white dark:bg-dark-surface',
+        sidebarCollapsed ? 'w-9' : 'w-72',
       )}>
+        {sidebarCollapsed ? (
+          <div className="flex-1 flex flex-col items-center pt-3">
+            <button
+              onClick={() => setSidebarCollapsed(false)}
+              title="Mostrar buscador de canciones"
+              className="p-1.5 text-slate-400 hover:text-brand-500 rounded-lg hover:bg-surface-soft dark:hover:bg-dark-card transition-colors"
+            >
+              <ChevronRightIcon />
+            </button>
+          </div>
+        ) : (
+        <>
         <div className="p-3 border-b border-surface-muted dark:border-dark-border">
           <div className="flex items-center justify-between mb-3">
             <SectionLabel>Canciones ({songs.length})</SectionLabel>
-            <Button size="sm" onClick={() => { setEditSong(null); setView('edit') }}>
-              <PlusIcon /> Nueva
-            </Button>
+            <div className="flex gap-1.5">
+              <Button size="sm" variant="secondary" onClick={() => setView('importPptx')} title="Importar letras desde un archivo PowerPoint">
+                <UploadIcon /> PPTX
+              </Button>
+              <Button size="sm" onClick={() => { setEditSong(null); setView('edit') }}>
+                <PlusIcon /> Nueva
+              </Button>
+            </div>
           </div>
 
           <div className="relative mb-2">
@@ -1524,6 +1403,8 @@ export function SongsPage() {
             ))
           )}
         </div>
+        </>
+        )}
       </div>
 
       {/* Panel derecho */}
@@ -1531,10 +1412,10 @@ export function SongsPage() {
         {activeSong ? (
           <SongDetail
             song={activeSong}
-            liveBg={liveBg}
             activeBg={activeBg}
             isLive={isLive}
-            onOpenProjector={handleProject}
+            sidebarCollapsed={sidebarCollapsed}
+            onToggleSidebar={() => setSidebarCollapsed(v => !v)}
             onEdit={async (s) => {
               const full = await ipc.songs.findById(s.id)
               setEditSong(full)
@@ -1542,14 +1423,7 @@ export function SongsPage() {
             }}
             onDelete={handleDelete}
             onClearLive={clearProjection}
-            onProjectSection={(section) => {
-              if (section._raw) {
-                project(section.lyrics, liveBg)
-              } else {
-                const meta = `— ${activeSong.title}${activeSong.artist ? ` · ${activeSong.artist}` : ''}`
-                project(`${section.lyrics}\n\n${meta}`, liveBg)
-              }
-            }}
+            onProjectSection={(section) => project(section.lyrics)}
           />
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center gap-3 text-slate-400">
