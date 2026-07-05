@@ -1,3 +1,5 @@
+import { escapeLike } from '../../utils/sqlHelpers.js'
+
 /**
  * SlidePresentationRepository
  * Gestiona los archivos de presentación subidos (PDF, etc.)
@@ -20,6 +22,16 @@ export class SlidePresentationRepository {
     return this.#db
       .prepare('SELECT * FROM slide_presentations WHERE id = ?')
       .get(id) ?? null
+  }
+
+  /** Búsqueda por nombre para el buscador global. */
+  searchByName(query, { limit = 5 } = {}) {
+    return this.#db.prepare(`
+      SELECT * FROM slide_presentations
+      WHERE name LIKE ? ESCAPE '\\'
+      ORDER BY is_favorite DESC, updated_at DESC
+      LIMIT ?
+    `).all(`%${escapeLike(query)}%`, limit)
   }
 
   create({ name, file_path, file_type = 'pdf', page_count = 0, thumbnail = null }) {

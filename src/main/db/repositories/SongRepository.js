@@ -1,3 +1,5 @@
+import { escapeLike, sanitizeFtsQuery } from '../../utils/sqlHelpers.js'
+
 /**
  * SongRepository
  *
@@ -18,8 +20,9 @@ export class SongRepository {
     const params = []
 
     if (search) {
-      q += ' AND (title LIKE ? OR artist LIKE ?)'
-      params.push(`%${search}%`, `%${search}%`)
+      q += " AND (title LIKE ? ESCAPE '\\' OR artist LIKE ? ESCAPE '\\')"
+      const pattern = `%${escapeLike(search)}%`
+      params.push(pattern, pattern)
     }
     if (artist) {
       q += ' AND artist = ?'
@@ -44,6 +47,22 @@ export class SongRepository {
       .all(id)
 
     return { ...this.#parse(song), sections }
+  }
+
+  /**
+   * Búsqueda para el buscador global: FTS5 con prefijo sobre
+   * título, artista y letra, ranking bm25 (título > artista > letra).
+   */
+  searchGlobal(query, { limit = 5 } = {}) {
+    const match = sanitizeFtsQuery(query)
+    if (!match) return []
+    return this.#db.prepare(`
+      SELECT s.id, s.title, s.artist, snippet(songs_fts, 2, '', '', '…', 8) AS snippet
+      FROM songs_fts JOIN songs s ON s.id = songs_fts.rowid
+      WHERE songs_fts MATCH ?
+      ORDER BY bm25(songs_fts, 5.0, 2.0, 1.0)
+      LIMIT ?
+    `).all(match, limit)
   }
 
   getArtists() {

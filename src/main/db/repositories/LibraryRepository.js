@@ -1,3 +1,5 @@
+import { escapeLike } from '../../utils/sqlHelpers.js'
+
 /**
  * LibraryRepository
  * CRUD completo para la tabla `library_items`.
@@ -22,8 +24,9 @@ export class LibraryRepository {
     }
 
     if (search) {
-      query += ' AND (title LIKE ? OR content LIKE ?)'
-      params.push(`%${search}%`, `%${search}%`)
+      query += " AND (title LIKE ? ESCAPE '\\' OR content LIKE ? ESCAPE '\\')"
+      const pattern = `%${escapeLike(search)}%`
+      params.push(pattern, pattern)
     }
 
     query += ' ORDER BY updated_at DESC LIMIT ? OFFSET ?'

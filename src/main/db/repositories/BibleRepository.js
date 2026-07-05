@@ -2,6 +2,7 @@ import Database from 'better-sqlite3'
 import { app }   from 'electron'
 import { join, extname } from 'path'
 import { existsSync, mkdirSync, readdirSync } from 'fs'
+import { escapeLike } from '../../utils/sqlHelpers.js'
 
 /**
  * BibleRepository
@@ -85,12 +86,13 @@ export class BibleRepository {
 
   search(moduleId, query, { limit = 50, offset = 0 } = {}) {
     const db      = this.#db(moduleId)
-    const pattern = `%${query}%`
-    const total   = db.prepare('SELECT COUNT(*) as n FROM verses WHERE text LIKE ?').get(pattern).n
+    // escapeLike + ESCAPE evita que %, _ o \ del usuario rompan el patrón
+    const pattern = `%${escapeLike(query)}%`
+    const total   = db.prepare("SELECT COUNT(*) as n FROM verses WHERE text LIKE ? ESCAPE '\\'").get(pattern).n
     const results = db.prepare(`
       SELECT v.*, b.name as book_name, b.abbrev as book_abbrev
       FROM verses v JOIN books b ON b.id = v.book
-      WHERE v.text LIKE ?
+      WHERE v.text LIKE ? ESCAPE '\\'
       ORDER BY v.id LIMIT ? OFFSET ?
     `).all(pattern, limit, offset).map(this.#fmt)
     return { total, results }
