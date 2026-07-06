@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import { DEFAULT_BG } from '@shared/constants/defaultBackground.js'
 import { DEFAULT_PROJECTION_FONT } from '@shared/utils/font.js'
 import { DEFAULT_WATERMARK } from '@shared/constants/watermark.js'
@@ -28,8 +28,8 @@ export function AppProvider({ children }) {
   const clearPendingSelection = useCallback(() => setPendingSelection(null), [])
 
   // ── Apariencia ────────────────────────────────────────────────────────────
-  const [theme, setThemeState] = useState('light') // 'light' | 'dark'
-  const [fontFamily, setFontFamilyState] = useState('jakarta')
+  const [theme, setThemeState] = useState('dark') // 'light' | 'dark'
+  const [fontFamily, setFontFamilyState] = useState('inter')
   const [animationSpeed, setAnimationSpeedState] = useState('normal')
 
   const setTheme = useCallback(async (value) => {
@@ -40,7 +40,7 @@ export function AppProvider({ children }) {
 
   const setFontFamily = useCallback(async (val) => {
     setFontFamilyState(val)
-    document.body.style.fontFamily = FONT_MAP[val] ?? FONT_MAP.jakarta
+    document.body.style.fontFamily = FONT_MAP[val] ?? FONT_MAP.inter
     await window.api?.settings.set('font_family', val)
   }, [])
 
@@ -191,32 +191,72 @@ export function AppProvider({ children }) {
     if (bg?.id) window.api?.settings.set('default_background_id', bg.id)
   }, [])
 
+  // ── Modo de pantalla (transport): normal | black | logo ────────────────────
+  const [screenMode, setScreenModeState] = useState('normal')
+  const screenModeRef = useRef('normal')
+  // Señal de limpieza global — las páginas con estado live local (Presentaciones/
+  // Multimedia) la consumen en un useEffect para resetear sus indicadores.
+  const [clearSignal, setClearSignal] = useState(0)
+  // Timestamp de inicio de la proyección actual — alimenta el timecode del Inspector
+  const [liveSince, setLiveSince] = useState(null)
+
+  const applyScreenMode = useCallback((next) => {
+    screenModeRef.current = next
+    setScreenModeState(next)
+    window.api?.projection.setScreen(next)
+  }, [])
+
+  // BLACK y LOGO son toggles mutuamente excluyentes
+  const toggleScreenMode = useCallback((mode) => {
+    applyScreenMode(screenModeRef.current === mode ? 'normal' : mode)
+  }, [applyScreenMode])
+
+  // ── Transport prev/next: patrón de registro por página ─────────────────────
+  // Las páginas registran handlers MEMOIZADOS con useCallback (si no, la barra
+  // ejecuta closures obsoletos): useEffect(() => registerTransport({ onPrev,
+  // onNext, label }), [onPrev, onNext, label]) — el cleanup desregistra solo.
+  const [transport, setTransport] = useState(null)
+
+  const registerTransport = useCallback((handlers) => {
+    setTransport(handlers)
+    return () => setTransport(curr => (curr === handlers ? null : curr))
+  }, [])
+
   const project = useCallback((text) => {
     const payload = { text, bg: activeBg ?? DEFAULT_BG, fontSize: projFontSize, fontFamily: projectionFontFamily, watermark }
     window.api?.projection.send(payload)
     setLiveText(text)
     setLastPayload(payload)
     setIsLive(true)
+    setLiveSince(s => s ?? Date.now())
     setProjCount(c => c + 1)
-  }, [activeBg, projFontSize, projectionFontFamily, watermark])
+    // Proyectar contenido nuevo sale del modo BLACK/LOGO — la intención del
+    // operador es mostrar lo que acaba de mandar.
+    if (screenModeRef.current !== 'normal') applyScreenMode('normal')
+  }, [activeBg, projFontSize, projectionFontFamily, watermark, applyScreenMode])
 
   const clearProjection = useCallback(() => {
     window.api?.projection.clear()
     setIsLive(false)
     setLiveText('')
     setLastPayload(null)
-  }, [])
+    setLiveSince(null)
+    setClearSignal(c => c + 1)
+    if (screenModeRef.current !== 'normal') applyScreenMode('normal')
+  }, [applyScreenMode])
 
   // Switch encendido/apagado: apaga sin perder el contenido, reenciende reenviando el último payload
   const toggleProjection = useCallback(() => {
     if (isLive) {
       window.api?.projection.clear()
       setIsLive(false)
+      setLiveSince(null)
       return
     }
     if (!lastPayload) return
     window.api?.projection.send(lastPayload)
     setIsLive(true)
+    setLiveSince(Date.now())
     setProjCount(c => c + 1)
   }, [isLive, lastPayload])
 
@@ -230,14 +270,14 @@ export function AppProvider({ children }) {
       const settings = await window.api?.settings.getAll() ?? {}
 
       // Aplicar tema guardado
-      const savedTheme = settings.theme ?? 'light'
+      const savedTheme = settings.theme ?? 'dark'
       setThemeState(savedTheme)
       document.documentElement.classList.toggle('dark', savedTheme === 'dark')
 
       // Aplicar fuente guardada
-      const savedFont = settings.font_family ?? 'jakarta'
+      const savedFont = settings.font_family ?? 'inter'
       setFontFamilyState(savedFont)
-      document.body.style.fontFamily = FONT_MAP[savedFont] ?? FONT_MAP.jakarta
+      document.body.style.fontFamily = FONT_MAP[savedFont] ?? FONT_MAP.inter
 
       // Aplicar velocidad de animación guardada
       const savedSpeed = settings.animation_speed ?? 'normal'
@@ -331,6 +371,10 @@ export function AppProvider({ children }) {
       // Proyección
       liveText, isLive, activeBg, setActiveBg, projCount, project, clearProjection, toggleProjection,
       nextText, setNextText,
+      // Transport / modo de pantalla
+      screenMode, toggleScreenMode,
+      clearSignal, liveSince,
+      transport, registerTransport,
       // Monitores
       displays,
     }}>

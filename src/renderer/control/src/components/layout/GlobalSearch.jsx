@@ -47,7 +47,7 @@ function Highlight({ text, query }) {
     <>
       {highlightParts(text, query).map((p, i) =>
         p.mark ? (
-          <mark key={i} className="bg-brand-100 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 rounded px-0.5 -mx-0.5 font-bold">
+          <mark key={i} className="bg-primary-500/15 text-primary-600 dark:text-primary-300 rounded-[2px] px-0.5 -mx-0.5 font-bold">
             {p.text}
           </mark>
         ) : (
@@ -197,16 +197,16 @@ export function GlobalSearch() {
         position: 'fixed',
         top:   rect.bottom + 6,
         left:  rect.left,
-        width: rect.width,
+        width: Math.max(rect.width, 420),
         zIndex: 9999,
       }
     : { display: 'none' }
 
   return (
-    <div ref={rootRef} className="relative flex-1 min-w-0 max-w-2xl">
+    <div ref={rootRef} className="relative w-52 focus-within:w-72 transition-[width] duration-200 flex-shrink-0">
       {/* Input con lupa y hint Ctrl+K */}
       <div className="relative">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-ink-4">
           <SearchIcon />
         </span>
         <input
@@ -219,14 +219,13 @@ export function GlobalSearch() {
           placeholder="Buscar en todo…"
           className={cn(
             'w-full transition-all duration-200',
-            'pl-8 pr-14 py-1.5 rounded-xl text-[13px]',
-            'bg-surface-soft dark:bg-dark-card',
-            'border border-surface-muted dark:border-dark-border',
-            'text-slate-700 dark:text-slate-200 placeholder:text-slate-400',
-            'focus:outline-none focus:border-brand-300 dark:focus:border-brand-700',
+            'pl-8 pr-14 py-1.5 rounded-btn text-[13px]',
+            'bg-surface-0 border border-line-1',
+            'text-ink-1 placeholder:text-ink-4',
+            'focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-500/15',
           )}
         />
-        <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none font-mono text-[9px] font-bold px-1.5 py-0.5 rounded border border-surface-muted dark:border-dark-border text-slate-400 dark:text-slate-500 select-none">
+        <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none font-mono text-[9px] font-bold px-1.5 py-0.5 rounded-[3px] bg-surface-3 border border-line-2 text-ink-3 select-none">
           Ctrl+K
         </kbd>
       </div>
@@ -235,11 +234,11 @@ export function GlobalSearch() {
       {open && (
         <div
           style={popStyle}
-          className="rounded-xl bg-white dark:bg-dark-surface border border-surface-muted dark:border-dark-border shadow-card-md overflow-hidden"
+          className="rounded-panel bg-surface-1 border border-line-1 shadow-card-md overflow-hidden animate-modal-in"
         >
           <div ref={listRef} className="max-h-[420px] overflow-y-auto py-1">
             {flatItems.length === 0 ? (
-              <p className="px-4 py-5 text-center text-[12px] text-slate-400">
+              <p className="px-4 py-5 text-center text-[12px] text-ink-4">
                 {loading ? 'Buscando…' : 'Sin resultados'}
               </p>
             ) : groups.map((group, gi) => {
@@ -250,7 +249,7 @@ export function GlobalSearch() {
                   {/* Header del grupo: dot de color + label */}
                   <div className="flex items-center gap-1.5 px-3 pt-2 pb-1">
                     <span className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', meta.dot)} />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                    <span className="text-[10px] font-mono font-semibold uppercase tracking-[1.2px] text-ink-4">
                       {meta.label}
                     </span>
                   </div>
@@ -266,25 +265,25 @@ export function GlobalSearch() {
                         onClick={() => select(withType)}
                         onMouseEnter={() => setActiveIndex(idx)}
                         className={cn(
-                          'group flex items-start gap-2 mx-1.5 px-2 py-1.5 rounded-lg cursor-pointer transition-colors',
+                          'group flex items-start gap-2 mx-1.5 px-2 py-1.5 rounded-btn cursor-pointer transition-colors',
                           isActive
-                            ? 'bg-brand-50 dark:bg-brand-950/30'
-                            : 'hover:bg-surface-soft dark:hover:bg-dark-card',
+                            ? 'bg-primary-500/10'
+                            : 'hover:bg-surface-3',
                         )}
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <p className="text-[12.5px] font-semibold text-slate-800 dark:text-slate-200 truncate">
+                            <p className="text-[12.5px] font-semibold text-ink-1 truncate">
                               <Highlight text={item.title} query={q} />
                             </p>
                             {item.subtitle && (
-                              <span className={cn('text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0', meta.badge)}>
+                              <span className={cn('text-[8.5px] font-mono font-semibold uppercase tracking-[0.5px] px-1.5 py-0.5 rounded-[3px] flex-shrink-0', meta.badge)}>
                                 {item.subtitle}
                               </span>
                             )}
                           </div>
                           {item.snippet && (
-                            <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate mt-0.5">
+                            <p className="text-[11px] text-ink-4 truncate mt-0.5">
                               <Highlight text={item.snippet} query={q} />
                             </p>
                           )}
@@ -296,8 +295,8 @@ export function GlobalSearch() {
                             onClick={(e) => projectItem(e, withType)}
                             title="Proyectar ahora"
                             className={cn(
-                              'flex items-center gap-1 flex-shrink-0 mt-0.5 px-1.5 py-1 rounded-md text-[10px] font-semibold transition-all',
-                              'text-brand-600 dark:text-brand-400 hover:bg-brand-100 dark:hover:bg-brand-950/50',
+                              'flex items-center gap-1 flex-shrink-0 mt-0.5 px-1.5 py-1 rounded-btn text-[10px] font-semibold transition-all',
+                              'text-primary-500 hover:bg-primary-500/15',
                               isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
                             )}
                           >
@@ -314,7 +313,7 @@ export function GlobalSearch() {
 
           {/* Pie con ayuda de teclado */}
           {flatItems.length > 0 && (
-            <div className="flex items-center gap-3 px-3 py-1.5 border-t border-surface-muted dark:border-dark-border text-[10px] text-slate-400 dark:text-slate-600 select-none">
+            <div className="flex items-center gap-3 px-3 py-1.5 border-t border-line-1 text-[10px] text-ink-4 select-none">
               <span><kbd className="font-mono font-bold">↑↓</kbd> navegar</span>
               <span><kbd className="font-mono font-bold">Enter</kbd> abrir</span>
               <span><kbd className="font-mono font-bold">Esc</kbd> cerrar</span>

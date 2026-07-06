@@ -1,7 +1,8 @@
 import { useApp, AppProvider }   from './context/AppContext.jsx'
 import { Topbar }                from './components/layout/Topbar.jsx'
 import { Sidebar }               from './components/layout/Sidebar.jsx'
-import { LivePanel }             from './components/live/LivePanel.jsx'
+import { TransportBar }          from './components/layout/TransportBar.jsx'
+import { Inspector }             from './components/inspector/Inspector.jsx'
 import { ControlPage }           from './pages/ControlPage.jsx'
 import { ScripturePage }         from './pages/ScripturePage.jsx'
 import { SongsPage }             from './pages/SongsPage.jsx'
@@ -12,7 +13,7 @@ import { SettingsPage }          from './pages/SettingsPage.jsx'
 
 function MainContent({ hideControls }) {
   const { activePage } = useApp()
-  const showLivePanel = activePage !== 'Ajustes'
+  const showInspector = activePage !== 'Ajustes'
 
   return (
     <div className="flex flex-1 overflow-hidden">
@@ -24,7 +25,7 @@ function MainContent({ hideControls }) {
       {activePage === 'Escenario'      && <StagePage />}
       {activePage === 'Ajustes'        && <SettingsPage />}
       {!['Escrituras','Canciones','Presentaciones','Multimedia','Escenario','Ajustes'].includes(activePage) && <ControlPage />}
-      {showLivePanel && <LivePanel />}
+      {showInspector && <Inspector />}
     </div>
   )
 }
@@ -38,6 +39,7 @@ function AppShell() {
     <div className="h-screen flex flex-col overflow-hidden">
       {!hideControls && <Topbar />}
       <MainContent hideControls={hideControls} />
+      {!hideControls && <TransportBar />}
     </div>
   )
 }

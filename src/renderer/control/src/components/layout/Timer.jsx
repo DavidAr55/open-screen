@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { cn } from '@shared/utils/cn.js'
 
 const PlayIcon  = () => <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
@@ -39,23 +39,33 @@ export function Timer() {
   const isOvertime = mode === 'countdown' && remaining < 0
 
   return (
-    <div className="relative flex items-center">
+    <div className="relative">
       <div className={cn(
-        'flex items-center gap-1.5 pl-2.5 pr-1.5 py-1.5 rounded-xl border transition-all select-none',
+        'flex items-center gap-1.5 pl-2.5 pr-1.5 py-2 rounded-btn border transition-all select-none',
         isOvertime
-          ? 'border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400'
-          : 'border-surface-muted dark:border-dark-border text-slate-500 dark:text-slate-400',
+          ? 'border-live-500/40 bg-live-500/10 text-live-500'
+          : running
+            ? 'border-live-500/30 text-ink-2'
+            : 'border-line-1 text-ink-3',
       )}>
-        <button onClick={() => setShowSettings(v => !v)} title="Configurar temporizador" className="hover:text-brand-500 transition-colors">
+        <button onClick={() => setShowSettings(v => !v)} title="Configurar temporizador" className="hover:text-primary-500 transition-colors">
           <ClockIcon />
         </button>
-        <span className="font-mono text-[12px] font-bold tabular-nums min-w-[52px] text-center">{display}</span>
+        <span className={cn(
+          'flex-1 font-mono text-[13px] font-bold tabular-nums text-center',
+          running && !isOvertime && 'text-ink-1',
+        )}>
+          {display}
+        </span>
         <button onClick={() => setRunning(r => !r)} title={running ? 'Pausar' : 'Iniciar'}
-          className="p-1 rounded-lg hover:bg-surface-soft dark:hover:bg-dark-card hover:text-brand-500 transition-colors">
+          className={cn(
+            'p-1.5 rounded-[3px] transition-colors',
+            running ? 'text-live-500 hover:bg-live-500/10' : 'hover:bg-surface-3 hover:text-primary-500',
+          )}>
           {running ? <PauseIcon /> : <PlayIcon />}
         </button>
         <button onClick={reset} title="Reiniciar"
-          className="p-1 rounded-lg hover:bg-surface-soft dark:hover:bg-dark-card hover:text-brand-500 transition-colors">
+          className="p-1.5 rounded-[3px] hover:bg-surface-3 hover:text-primary-500 transition-colors">
           <ResetIcon />
         </button>
       </div>
@@ -63,15 +73,15 @@ export function Timer() {
       {showSettings && (
         <>
           <div className="fixed inset-0 z-[999]" onClick={() => setShowSettings(false)} />
-          <div className="absolute top-full mt-2 right-0 z-[1000] w-48 p-3 rounded-xl bg-white dark:bg-dark-surface border border-surface-muted dark:border-dark-border shadow-card-md">
-            <div className="flex gap-1 p-1 rounded-lg bg-surface-soft dark:bg-dark-card mb-2">
+          <div className="absolute top-full mt-2 right-0 z-[1000] w-52 p-3 rounded-panel bg-surface-1 border border-line-1 shadow-card-md animate-modal-in">
+            <div className="flex gap-0.5 p-0.5 rounded-btn bg-surface-0 border border-line-1 mb-2">
               {['stopwatch', 'countdown'].map(m => (
                 <button key={m} onClick={() => { setMode(m); reset() }}
                   className={cn(
-                    'flex-1 py-1 rounded-md text-[11px] font-semibold transition-all',
-                    mode === m ? 'bg-white dark:bg-dark-surface text-slate-900 dark:text-white shadow-sm' : 'text-slate-400',
+                    'flex-1 py-1 rounded-[3px] text-[10px] font-mono font-semibold uppercase tracking-[0.5px] transition-all',
+                    mode === m ? 'bg-surface-3 text-ink-1 border border-line-2' : 'text-ink-4 border border-transparent',
                   )}>
-                  {m === 'stopwatch' ? 'Cronómetro' : 'Cuenta regresiva'}
+                  {m === 'stopwatch' ? 'Crono' : 'Regresiva'}
                 </button>
               ))}
             </div>
@@ -80,8 +90,8 @@ export function Timer() {
                 {COUNTDOWN_PRESETS.map(min => (
                   <button key={min} onClick={() => { setCountdownMin(min); reset() }}
                     className={cn(
-                      'text-[10px] font-semibold py-1 rounded-md transition-all',
-                      countdownMin === min ? 'bg-brand-600 text-white' : 'bg-surface-soft dark:bg-dark-card text-slate-500 hover:text-brand-600',
+                      'text-[10px] font-mono font-semibold py-1 rounded-[3px] transition-all',
+                      countdownMin === min ? 'bg-primary-500 text-white' : 'bg-surface-3 text-ink-3 hover:text-primary-500',
                     )}>
                     {min}m
                   </button>
