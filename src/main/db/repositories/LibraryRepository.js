@@ -55,18 +55,18 @@ export class LibraryRepository {
 
   // ── Escritura ─────────────────────────────────────────────────────
 
-  create({ title, content, type = 'text', tags = [] }) {
+  create({ title, content, type = 'text', tags = [], ref = null }) {
     const result = this.#db
       .prepare(`
-        INSERT INTO library_items (title, content, type, tags)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO library_items (title, content, type, tags, ref)
+        VALUES (?, ?, ?, ?, ?)
       `)
-      .run(title, content, type, JSON.stringify(tags))
+      .run(title, content, type, JSON.stringify(tags), ref ? JSON.stringify(ref) : null)
 
     return this.findById(result.lastInsertRowid)
   }
 
-  update(id, { title, content, type, tags }) {
+  update(id, { title, content, type, tags, ref }) {
     const fields = []
     const params = []
 
@@ -74,6 +74,7 @@ export class LibraryRepository {
     if (content !== undefined) { fields.push('content = ?');          params.push(content) }
     if (type    !== undefined) { fields.push('type = ?');             params.push(type) }
     if (tags    !== undefined) { fields.push('tags = ?');             params.push(JSON.stringify(tags)) }
+    if (ref     !== undefined) { fields.push('ref = ?');              params.push(ref ? JSON.stringify(ref) : null) }
 
     if (fields.length === 0) return this.findById(id)
 
@@ -101,6 +102,10 @@ export class LibraryRepository {
       ...row,
       tags: (() => {
         try { return JSON.parse(row.tags) } catch { return [] }
+      })(),
+      ref: (() => {
+        if (!row.ref) return null
+        try { return JSON.parse(row.ref) } catch { return null }
       })()
     }
   }

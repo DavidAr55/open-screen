@@ -317,5 +317,16 @@ export const SCHEMA = {
                COALESCE((SELECT group_concat(lyrics,' ') FROM song_sections WHERE song_id = s.id), '')
         FROM songs s WHERE s.id = old.song_id;
     END;
+  `,
+
+  // ────────────────────────────────────────────────────────────────
+  //  v9 — Referencia de origen en ítems de biblioteca
+  //
+  //  JSON con los IDs necesarios para volver a la vista de origen
+  //  (versículo, canción, presentación o multimedia) y preseleccionar
+  //  el ítem exacto, igual que hace el deep-link del buscador global.
+  // ────────────────────────────────────────────────────────────────
+  v9: `
+    ALTER TABLE library_items ADD COLUMN ref TEXT;
   `
 }
