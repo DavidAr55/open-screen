@@ -98,3 +98,8 @@ bibles/
 # Las fuentes JSON de dominio público sí se pueden incluir
 # (descomenta la línea siguiente para rv1909 u otras PD)
 # !bibles-src/rv1909.json
+
+# ── Claude Code ───────────────────────────────
+.agents/
+.claude/
+skills-lock.json
