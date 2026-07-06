@@ -2,7 +2,7 @@
 
 <br/>
 
-<img src="https://img.shields.io/badge/version-0.2.0-e51d1d?style=flat-square" />
+<img src="https://img.shields.io/badge/version-0.3.1-e51d1d?style=flat-square" />
 <img src="https://img.shields.io/badge/electron-33+-47848F?style=flat-square&logo=electron&logoColor=white" />
 <img src="https://img.shields.io/badge/tailwind-3.x-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white" />
 <img src="https://img.shields.io/badge/licencia-MIT-22c55e?style=flat-square" />

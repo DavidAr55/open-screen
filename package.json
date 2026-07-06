@@ -1,6 +1,6 @@
 {
   "name": "open-screen",
-  "version": "0.2.0",
+  "version": "0.3.1",
   "type": "module",
   "description": "Open source presentation & projection software",
   "main": "out/main/index.js",
@@ -93,5 +93,15 @@
       "icon": "resources/icon.png",
       "category": "AudioVideo"
     }
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3",
+      "electron",
+      "electron-winstaller",
+      "esbuild",
+      "lzma-native",
+      "sharp"
+    ]
   }
 }
