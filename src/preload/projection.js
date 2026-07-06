@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('api', {
   onSetFont: (cb) => ipcRenderer.on('projection:setFont',  (_e, name)    => cb(name)),
   onSetFontSize: (cb) => ipcRenderer.on('projection:setFontSize', (_e, mode) => cb(mode)),
   onSetWatermark: (cb) => ipcRenderer.on('projection:setWatermark', (_e, payload) => cb(payload)),
+  onSetScreen:    (cb) => ipcRenderer.on('projection:setScreen',    (_e, mode)    => cb(mode)),
 
   removeAllListeners: () => {
     ipcRenderer.removeAllListeners('projection:receive')
@@ -27,5 +28,6 @@ contextBridge.exposeInMainWorld('api', {
     ipcRenderer.removeAllListeners('projection:setFont')
     ipcRenderer.removeAllListeners('projection:setFontSize')
     ipcRenderer.removeAllListeners('projection:setWatermark')
+    ipcRenderer.removeAllListeners('projection:setScreen')
   },
 })

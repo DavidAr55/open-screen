@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('api', {
     setFont:      (fontName)  => ipcRenderer.send('projection:setFont', fontName),
     setFontSize:  (mode)      => ipcRenderer.send('projection:setFontSize', mode),
     setWatermark: (watermark) => ipcRenderer.send('projection:setWatermark', watermark),
+    setScreen:    (mode)      => ipcRenderer.send('projection:setScreen', mode),
   },
   library: {
     findAll:  (filters)    => ipcRenderer.invoke('library:findAll', filters),

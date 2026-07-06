@@ -36,4 +36,9 @@ export function registerProjectionIPC(windowManager) {
   ipcMain.on('projection:setWatermark', (_e, watermark) => {
     windowManager.sendToProjection('projection:setWatermark', watermark)
   })
+
+  // Modo de pantalla del transport: 'normal' | 'black' | 'logo'
+  ipcMain.on('projection:setScreen', (_e, mode) => {
+    windowManager.sendToProjection('projection:setScreen', mode)
+  })
 }

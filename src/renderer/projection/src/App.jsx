@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { DEFAULT_BG } from '@shared/constants/defaultBackground.js'
-import { buildFontFamily, resolveFontSize } from '@shared/utils/font.js'
+import { buildFontFamily, resolveFontSize, splitProjectionText } from '@shared/utils/font.js'
 import { DEFAULT_WATERMARK, WATERMARK_OPACITY_MAP, watermarkCornerStyle } from '@shared/constants/watermark.js'
 
 export default function ProjectionApp() {
@@ -16,6 +16,7 @@ export default function ProjectionApp() {
   const [watermark,   setWatermark]   = useState(DEFAULT_WATERMARK)
   const [media,        setMedia]        = useState(null) // { id, type, url, name }
   const [mediaVisible, setMediaVisible] = useState(false)
+  const [screenMode,   setScreenMode]   = useState('normal') // 'normal' | 'black' | 'logo'
 
   const fadeTimer = useRef(null)
   const frozenRef = useRef(false)
@@ -31,10 +32,12 @@ export default function ProjectionApp() {
 
   const showText = useCallback((newText, newSubtext, rawBg, fontSizeMode, fontFamilyName) => {
     setSlideVisible(false)
+    setMediaVisible(false)
     setTextVisible(false)
     clearTimeout(fadeTimer.current)
     fadeTimer.current = setTimeout(() => {
       setSlideImg(null); setSlideInfo(null)
+      setMedia(null)
       setText(newText ?? '')
       setSubtext(newSubtext ?? '')
       setFontSize(resolveFontSize(newText ?? '', fontSizeMode))
@@ -49,8 +52,10 @@ export default function ProjectionApp() {
   const showSlide = useCallback((payload) => {
     setTextVisible(false)
     setSlideVisible(false)
+    setMediaVisible(false)
     clearTimeout(fadeTimer.current)
     fadeTimer.current = setTimeout(() => {
+      setMedia(null)
       setSlideImg(payload.dataUrl)
       setSlideInfo({ current: payload.slideNumber, total: payload.totalSlides, name: payload.presentationName })
       setSlideVisible(true)
@@ -59,9 +64,11 @@ export default function ProjectionApp() {
 
   const showMedia = useCallback((payload) => {
     setTextVisible(false)
+    setSlideVisible(false)
     setMediaVisible(false)
     clearTimeout(fadeTimer.current)
     fadeTimer.current = setTimeout(() => {
+      setSlideImg(null); setSlideInfo(null)
       setMedia(payload)
       setMediaVisible(true)
     }, 150)
@@ -70,10 +77,7 @@ export default function ProjectionApp() {
   useEffect(() => {
     window.api?.onReceive(payload => {
       if (frozenRef.current) return
-      const raw    = payload.text ?? ''
-      const sepIdx = raw.lastIndexOf('\n\n—')
-      const main   = sepIdx !== -1 ? raw.substring(0, sepIdx).trim() : raw
-      const sub    = sepIdx !== -1 ? raw.substring(sepIdx + 3).trim() : ''
+      const { main, sub } = splitProjectionText(payload.text)
       showText(main, sub, payload.bg, payload.fontSize, payload.fontFamily)
       if (payload.watermark) setWatermark(payload.watermark)
     })
@@ -106,6 +110,7 @@ export default function ProjectionApp() {
     window.api?.onSetFont(name => { setFontFamily(buildFontFamily(name)) })
     window.api?.onSetFontSize(mode => { setFontSize(resolveFontSize(textRef.current, mode)) })
     window.api?.onSetWatermark(wm => { setWatermark(wm) })
+    window.api?.onSetScreen(mode => { setScreenMode(mode ?? 'normal') })
 
     return () => { clearTimeout(fadeTimer.current); window.api?.removeAllListeners() }
   }, [showText, showSlide, showMedia, applyBg])
@@ -184,6 +189,10 @@ export default function ProjectionApp() {
           autoPlay
           playsInline
           controls={false}
+          onLoadedMetadata={e => {
+            if (media.startAt) e.target.currentTime = media.startAt
+            if (media.paused) e.target.pause()
+          }}
           onError={e => console.warn('[Media] error:', e.target.error?.message, 'src:', e.target.src)}
           style={{
             position: 'fixed', inset: 0, zIndex: 5,
@@ -244,6 +253,30 @@ export default function ProjectionApp() {
           }}
         />
       )}
+
+      {/* Overlay del transport: pantalla en negro o logo (por encima de todo) */}
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 20, background: '#000',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        opacity: screenMode !== 'normal' ? 1 : 0,
+        pointerEvents: 'none',
+        transition: 'opacity 0.35s ease',
+      }}>
+        {screenMode === 'logo' && (
+          watermark.image ? (
+            <img src={watermark.image} alt=""
+              style={{ maxWidth: '28%', maxHeight: '28%', objectFit: 'contain' }} />
+          ) : (
+            <span style={{
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+              fontSize: 26, fontWeight: 800, letterSpacing: '6px',
+              textTransform: 'uppercase', color: 'rgba(255,255,255,0.25)',
+            }}>
+              Open Screen
+            </span>
+          )
+        )}
+      </div>
 
       <div style={{
         position: 'fixed', bottom: 18, right: 22, zIndex: 10,
