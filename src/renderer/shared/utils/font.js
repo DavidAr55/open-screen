@@ -29,3 +29,23 @@ export function resolveFontSize(text, fontSizeMode) {
   if (fontSizeMode && fontSizeMode !== 'auto' && !Number.isNaN(custom) && custom > 0) return custom
   return calcAutoFontSize(text)
 }
+
+// Separa el texto principal del subtexto (referencia/atribución) usando el
+// mismo delimitador que la ventana de proyección, para que los previews del
+// Control muestren exactamente el mismo resultado.
+export function splitProjectionText(raw) {
+  const text   = raw ?? ''
+  const sepIdx = text.lastIndexOf('\n\n—')
+  const main   = sepIdx !== -1 ? text.substring(0, sepIdx).trim() : text
+  const sub    = sepIdx !== -1 ? text.substring(sepIdx + 3).trim() : ''
+  return { main, sub }
+}
+
+// Ancho (px) que la proyección real asume como referencia al calcular el
+// tamaño de fuente en píxeles absolutos — usado para escalar ese mismo
+// tamaño a unidades `cqw` dentro de los lienzos de preview del Control.
+export const PROJECTION_REF_WIDTH = 1920
+
+export function previewFontSize(px) {
+  return `${(px / PROJECTION_REF_WIDTH * 100).toFixed(3)}cqw`
+}
