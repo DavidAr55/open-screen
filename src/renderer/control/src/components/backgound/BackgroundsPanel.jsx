@@ -73,10 +73,10 @@ function BgCard({ bg, isActive, onSelect, onFav, onDelete }) {
     <div
       onClick={onSelect}
       className={cn(
-        'group relative rounded-xl border-2 cursor-pointer transition-all overflow-hidden',
+        'group relative rounded-panel border-2 cursor-pointer transition-all overflow-hidden',
         isActive
-          ? 'border-brand-500 shadow-brand'
-          : 'border-transparent hover:border-brand-300 dark:hover:border-brand-700',
+          ? 'border-primary-500'
+          : 'border-transparent hover:border-primary-500/50',
       )}
     >
       {/* Preview */}
@@ -99,7 +99,7 @@ function BgCard({ bg, isActive, onSelect, onFav, onDelete }) {
 
         {/* Active check */}
         {isActive && (
-          <div className="absolute top-1.5 left-1.5 w-5 h-5 rounded-full bg-brand-600 flex items-center justify-center">
+          <div className="absolute top-1.5 left-1.5 w-5 h-5 rounded-full bg-primary-500 text-white flex items-center justify-center">
             <CheckIcon />
           </div>
         )}
@@ -108,14 +108,14 @@ function BgCard({ bg, isActive, onSelect, onFav, onDelete }) {
         <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={e => { e.stopPropagation(); onFav() }}
-            className={cn('p-1 rounded-lg bg-black/50 transition-all', bg.is_favorite ? 'text-amber-400' : 'text-white/60 hover:text-amber-400')}
+            className={cn('p-1 rounded-btn bg-black/50 transition-all', bg.is_favorite ? 'text-warn-400' : 'text-white/60 hover:text-warn-400')}
           >
             <StarIcon f={bg.is_favorite} />
           </button>
           {!bg.is_preset && (
             <button
               onClick={e => { e.stopPropagation(); onDelete() }}
-              className="p-1 rounded-lg bg-black/50 text-white/60 hover:text-red-400 transition-all"
+              className="p-1 rounded-btn bg-black/50 text-white/60 hover:text-live-400 transition-all"
             >
               <TrashIcon />
             </button>
@@ -124,7 +124,7 @@ function BgCard({ bg, isActive, onSelect, onFav, onDelete }) {
 
         {/* Type badge */}
         <div className="absolute bottom-1 left-1.5">
-          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-black/60 text-white/70">
+          <span className="text-[8.5px] font-mono font-semibold uppercase tracking-[0.5px] px-1.5 py-0.5 rounded-[3px] bg-black/60 text-white/70">
             {TYPE_LABELS[bg.type] ?? bg.type}
           </span>
         </div>
@@ -141,30 +141,30 @@ function ColorEditor({ onSave }) {
     <div className="flex gap-4">
       <div className="flex-1 space-y-3">
         <div>
-          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Nombre</label>
+          <label className="text-[10px] font-mono font-medium text-ink-4 uppercase tracking-[1.2px] block mb-1">Nombre</label>
           <input value={name} onChange={e => setName(e.target.value)} placeholder="Mi color"
-            className="w-full px-3 py-2 text-[13px] rounded-lg bg-surface-soft dark:bg-dark-card border border-surface-muted dark:border-dark-border outline-none focus:border-brand-500 text-slate-900 dark:text-slate-100" />
+            className="w-full px-3 py-2 text-[13px] rounded-btn bg-surface-0 border border-line-1 outline-none focus:border-primary-500 text-ink-1" />
         </div>
         <div>
-          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Color</label>
+          <label className="text-[10px] font-mono font-medium text-ink-4 uppercase tracking-[1.2px] block mb-1">Color</label>
           <div className="flex gap-3 items-center">
             <input type="color" value={color} onChange={e => setColor(e.target.value)}
-              className="w-12 h-12 rounded-xl cursor-pointer border-0 outline-none bg-transparent" />
+              className="w-12 h-12 rounded-panel cursor-pointer border-0 outline-none bg-transparent" />
             <input value={color} onChange={e => setColor(e.target.value)} placeholder="#000000"
-              className="flex-1 px-3 py-2 text-[13px] font-mono rounded-lg bg-surface-soft dark:bg-dark-card border border-surface-muted dark:border-dark-border outline-none focus:border-brand-500 text-slate-900 dark:text-slate-100" />
+              className="flex-1 px-3 py-2 text-[13px] font-mono rounded-btn bg-surface-0 border border-line-1 outline-none focus:border-primary-500 text-ink-1" />
           </div>
         </div>
         <button
           disabled={!name.trim()}
           onClick={() => onSave({ name: name.trim(), type: 'color', value: color })}
-          className="w-full py-2 rounded-xl text-[13px] font-bold text-white bg-brand-600 hover:bg-brand-700 disabled:opacity-40 transition-all"
+          className="w-full py-2 rounded-btn text-[13px] font-bold bg-primary-200 text-neutral-950 hover:bg-primary-300 disabled:opacity-40 transition-all"
         >
           Guardar color
         </button>
       </div>
       <div className="flex-1">
-        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Vista previa</label>
-        <div className="rounded-xl overflow-hidden" style={{ height: 128, background: color }} />
+        <label className="text-[10px] font-mono font-medium text-ink-4 uppercase tracking-[1.2px] block mb-1">Vista previa</label>
+        <div className="rounded-panel overflow-hidden border border-line-1" style={{ height: 128, background: color }} />
       </div>
     </div>
   )
@@ -190,16 +190,16 @@ function GradientEditor({ onSave }) {
     <div className="flex gap-4">
       <div className="flex-1 space-y-3">
         <div>
-          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Nombre</label>
+          <label className="text-[10px] font-mono font-medium text-ink-4 uppercase tracking-[1.2px] block mb-1">Nombre</label>
           <input value={name} onChange={e => setName(e.target.value)} placeholder="Mi gradiente"
-            className="w-full px-3 py-2 text-[13px] rounded-lg bg-surface-soft dark:bg-dark-card border border-surface-muted dark:border-dark-border outline-none focus:border-brand-500 text-slate-900 dark:text-slate-100" />
+            className="w-full px-3 py-2 text-[13px] rounded-btn bg-surface-0 border border-line-1 outline-none focus:border-primary-500 text-ink-1" />
         </div>
 
-        <div className="flex gap-1 p-1 rounded-lg bg-surface-soft dark:bg-dark-card">
+        <div className="flex gap-0.5 p-0.5 rounded-btn bg-surface-0 border border-line-1">
           {['linear-gradient','radial-gradient'].map(t => (
             <button key={t} onClick={() => setType(t)}
-              className={cn('flex-1 py-1 rounded-md text-[11px] font-semibold transition-all',
-                type === t ? 'bg-white dark:bg-dark-surface text-slate-900 dark:text-white shadow-sm' : 'text-slate-400')}>
+              className={cn('flex-1 py-1 rounded-[3px] text-[10px] font-mono font-semibold uppercase tracking-[0.5px] transition-all',
+                type === t ? 'bg-surface-3 text-ink-1 border border-line-2' : 'text-ink-4 border border-transparent')}>
               {t === 'linear-gradient' ? 'Lineal' : 'Radial'}
             </button>
           ))}
@@ -209,23 +209,23 @@ function GradientEditor({ onSave }) {
           <>
             {type === 'linear-gradient' && (
               <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Ángulo: {angle}°</label>
+                <label className="text-[10px] font-mono font-medium text-ink-4 uppercase tracking-[1.2px] block mb-1">Ángulo: {angle}°</label>
                 <input type="range" min="0" max="360" value={angle} onChange={e => setAngle(+e.target.value)} className="w-full" />
               </div>
             )}
             <div className="flex gap-3">
               <div className="flex-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Color 1</label>
+                <label className="text-[10px] font-mono font-medium text-ink-4 uppercase tracking-[1.2px] block mb-1">Color 1</label>
                 <div className="flex gap-2 items-center">
                   <input type="color" value={color1} onChange={e => setColor1(e.target.value)} className="w-10 h-10 rounded-lg cursor-pointer border-0 bg-transparent" />
-                  <input value={color1} onChange={e => setColor1(e.target.value)} className="flex-1 px-2 py-1.5 text-[12px] font-mono rounded-lg bg-surface-soft dark:bg-dark-card border border-surface-muted dark:border-dark-border outline-none focus:border-brand-500 text-slate-900 dark:text-slate-100" />
+                  <input value={color1} onChange={e => setColor1(e.target.value)} className="flex-1 px-2 py-1.5 text-[12px] font-mono rounded-btn bg-surface-0 border border-line-1 outline-none focus:border-primary-500 text-ink-1" />
                 </div>
               </div>
               <div className="flex-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Color 2</label>
+                <label className="text-[10px] font-mono font-medium text-ink-4 uppercase tracking-[1.2px] block mb-1">Color 2</label>
                 <div className="flex gap-2 items-center">
                   <input type="color" value={color2} onChange={e => setColor2(e.target.value)} className="w-10 h-10 rounded-lg cursor-pointer border-0 bg-transparent" />
-                  <input value={color2} onChange={e => setColor2(e.target.value)} className="flex-1 px-2 py-1.5 text-[12px] font-mono rounded-lg bg-surface-soft dark:bg-dark-card border border-surface-muted dark:border-dark-border outline-none focus:border-brand-500 text-slate-900 dark:text-slate-100" />
+                  <input value={color2} onChange={e => setColor2(e.target.value)} className="flex-1 px-2 py-1.5 text-[12px] font-mono rounded-btn bg-surface-0 border border-line-1 outline-none focus:border-primary-500 text-ink-1" />
                 </div>
               </div>
             </div>
@@ -233,7 +233,7 @@ function GradientEditor({ onSave }) {
         )}
 
         <button onClick={() => setUseCustom(v => !v)}
-          className="text-[11px] text-brand-500 hover:text-brand-600 font-semibold">
+          className="text-[11px] text-primary-500 hover:text-primary-400 font-semibold">
           {useCustom ? '← Usar editor visual' : 'Usar CSS personalizado →'}
         </button>
 
@@ -241,13 +241,13 @@ function GradientEditor({ onSave }) {
           <textarea value={custom} onChange={e => setCustom(e.target.value)}
             placeholder="linear-gradient(135deg, #111 0%, #000 100%)"
             rows={2}
-            className="w-full px-3 py-2 text-[12px] font-mono rounded-lg bg-surface-soft dark:bg-dark-card border border-surface-muted dark:border-dark-border outline-none focus:border-brand-500 text-slate-900 dark:text-slate-100 resize-none" />
+            className="w-full px-3 py-2 text-[12px] font-mono rounded-btn bg-surface-0 border border-line-1 outline-none focus:border-primary-500 text-ink-1 resize-none" />
         )}
 
         <button
           disabled={!name.trim() || !gradientCss.trim()}
           onClick={() => onSave({ name: name.trim(), type: 'gradient', value: gradientCss })}
-          className="w-full py-2 rounded-xl text-[13px] font-bold text-white bg-brand-600 hover:bg-brand-700 disabled:opacity-40 transition-all"
+          className="w-full py-2 rounded-btn text-[13px] font-bold bg-primary-200 text-neutral-950 hover:bg-primary-300 disabled:opacity-40 transition-all"
         >
           Guardar gradiente
         </button>
@@ -255,19 +255,19 @@ function GradientEditor({ onSave }) {
 
       <div className="flex-1 space-y-3">
         <div>
-          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Vista previa</label>
-          <div className="rounded-xl overflow-hidden" style={{ height: 96, background: gradientCss }} />
+          <label className="text-[10px] font-mono font-medium text-ink-4 uppercase tracking-[1.2px] block mb-1">Vista previa</label>
+          <div className="rounded-panel overflow-hidden border border-line-1" style={{ height: 96, background: gradientCss }} />
         </div>
 
         <div>
-          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Presets rápidos</label>
+          <label className="text-[10px] font-mono font-medium text-ink-4 uppercase tracking-[1.2px] block mb-1.5">Presets rápidos</label>
           <div className="grid grid-cols-3 gap-1.5">
             {GRADIENT_PRESETS.map(p => (
               <button key={p.name} onClick={() => { setCustom(p.value); setUseCustom(true); setName(p.name) }}
-                className="rounded-lg overflow-hidden border-2 border-transparent hover:border-brand-400 transition-all"
+                className="rounded-btn overflow-hidden border-2 border-transparent hover:border-primary-400 transition-all"
                 title={p.name}>
                 <div style={{ height: 36, background: p.value }} />
-                <div className="text-[9px] text-center py-0.5 bg-surface-soft dark:bg-dark-card text-slate-500 truncate px-1">{p.name}</div>
+                <div className="text-[9px] text-center py-0.5 bg-surface-3 text-ink-3 truncate px-1">{p.name}</div>
               </button>
             ))}
           </div>
@@ -344,7 +344,7 @@ function FileImportStep({ onConfirm, onCancel, importing }) {
     return (
       <div className="space-y-3">
         {/* Preview */}
-        <div className="rounded-xl overflow-hidden bg-black" style={{ aspectRatio: '16/9' }}>
+        <div className="rounded-panel overflow-hidden bg-black border border-line-1" style={{ aspectRatio: '16/9' }}>
           {(pendingFile.type === 'image' || pendingFile.type === 'gif') && pendingFile.previewSrc && (
             <img src={pendingFile.previewSrc} alt="" className="w-full h-full object-contain" />
           )}
@@ -365,24 +365,24 @@ function FileImportStep({ onConfirm, onCancel, importing }) {
 
         {/* Nombre */}
         <div>
-          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Nombre</label>
+          <label className="text-[10px] font-mono font-medium text-ink-4 uppercase tracking-[1.2px] block mb-1">Nombre</label>
           <input
             value={customName}
             onChange={e => setCustomName(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && confirm()}
             placeholder="Nombre para identificarlo…"
-            className="w-full px-3 py-2 text-[13px] rounded-lg bg-surface-soft dark:bg-dark-card border border-surface-muted dark:border-dark-border outline-none focus:border-brand-500 text-slate-900 dark:text-slate-100"
+            className="w-full px-3 py-2 text-[13px] rounded-btn bg-surface-0 border border-line-1 outline-none focus:border-primary-500 text-ink-1"
           />
         </div>
 
         {/* Acciones */}
         <div className="flex gap-2">
           <button onClick={cancel}
-            className="flex-1 py-2 rounded-xl text-[13px] font-semibold border border-surface-muted dark:border-dark-border text-slate-600 dark:text-slate-300 hover:bg-surface-soft dark:hover:bg-dark-card transition-all">
+            className="flex-1 py-2 rounded-btn text-[13px] font-semibold border border-line-2 text-ink-2 hover:bg-surface-3 transition-all">
             Cancelar
           </button>
           <button onClick={confirm} disabled={importing}
-            className="flex-[2] py-2 rounded-xl text-[13px] font-bold text-white bg-brand-600 hover:bg-brand-700 disabled:opacity-50 transition-all">
+            className="flex-[2] py-2 rounded-btn text-[13px] font-bold bg-primary-200 text-neutral-950 hover:bg-primary-300 disabled:opacity-50 transition-all">
             {importing ? 'Guardando…' : 'Guardar fondo'}
           </button>
         </div>
@@ -396,17 +396,17 @@ function FileImportStep({ onConfirm, onCancel, importing }) {
         onClick={pickFile}
         disabled={picking}
         className={cn(
-          'w-full flex items-center justify-center gap-2 py-4 rounded-xl',
-          'border-2 border-dashed border-surface-muted dark:border-dark-border',
-          'text-[13px] font-semibold text-slate-500 dark:text-slate-400',
-          'hover:border-brand-400 hover:text-brand-500 transition-all',
+          'w-full flex items-center justify-center gap-2 py-4 rounded-panel',
+          'border-2 border-dashed border-line-2',
+          'text-[13px] font-semibold text-ink-3',
+          'hover:border-primary-400 hover:text-primary-500 transition-all',
           'disabled:opacity-50 disabled:pointer-events-none',
         )}
       >
         {picking ? <Spinner size={16} /> : <UploadIcon />}
         {picking ? 'Abriendo…' : 'Elegir archivo'}
       </button>
-      <p className="text-[10px] text-slate-400 text-center">
+      <p className="text-[10px] font-mono text-ink-4 text-center">
         JPG · PNG · WEBP · GIF · MP4 · WEBM · MOV
       </p>
     </div>
@@ -538,32 +538,31 @@ export function BackgroundsPanel({ onClose }) {
         ref={panelRef}
         className={cn(
           'fixed top-[54px] right-0 bottom-0 z-[1001] w-[780px] max-w-[92vw]',
-          'bg-white dark:bg-dark-surface',
-          'border-l border-surface-muted dark:border-dark-border',
+          'bg-surface-1 border-l border-line-1',
           'flex flex-col overflow-hidden shadow-2xl',
+          'animate-slide-in-right',
         )}
-        style={{ animation: 'slideInRight 0.2s cubic-bezier(.34,1.56,.64,1)' }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-surface-muted dark:border-dark-border flex-shrink-0">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-line-1 flex-shrink-0">
           <div>
-            <h2 className="font-bold text-[15px] text-slate-900 dark:text-white">Fondos de proyección</h2>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              Fondo activo: <span className="text-brand-500 font-semibold">{activeBg?.name ?? 'Oscuro (predeterminado)'}</span>
+            <h2 className="font-bold text-[15px] text-ink-1">Fondos de proyección</h2>
+            <p className="text-[11px] text-ink-4 mt-0.5">
+              Fondo activo: <span className="text-primary-500 font-semibold">{activeBg?.name ?? 'Oscuro (predeterminado)'}</span>
             </p>
           </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg hover:bg-surface-soft dark:hover:bg-dark-card transition-all">
+          <button onClick={onClose} className="p-2 text-ink-4 hover:text-ink-1 rounded-btn hover:bg-surface-3 transition-all">
             <XIcon />
           </button>
         </div>
 
         {/* Tabs de tipo */}
-        <div className="flex gap-1 px-4 py-2.5 border-b border-surface-muted dark:border-dark-border overflow-x-auto flex-shrink-0 items-center">
+        <div className="flex gap-1 px-4 py-2.5 border-b border-line-1 overflow-x-auto flex-shrink-0 items-center">
           {TABS.map(t => (
             <button key={t.id} onClick={() => setActiveTab(t.id)}
               className={cn(
-                'text-[11px] font-semibold px-3 py-1 rounded-full whitespace-nowrap transition-all flex-shrink-0',
-                activeTab === t.id ? 'bg-brand-600 text-white' : 'bg-surface-soft dark:bg-dark-card text-slate-500 hover:text-slate-700 dark:hover:text-slate-300',
+                'text-[10px] font-mono font-semibold uppercase tracking-[0.5px] px-3 py-1 rounded-btn whitespace-nowrap transition-all flex-shrink-0',
+                activeTab === t.id ? 'bg-primary-500 text-white' : 'bg-surface-3 text-ink-3 hover:text-ink-1',
               )}>
               {t.label}
             </button>
@@ -572,7 +571,7 @@ export function BackgroundsPanel({ onClose }) {
           {isFileTab && (
             <button
               onClick={() => setEditorTab('file')}
-              className="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-brand-50 dark:bg-brand-950/30 text-brand-600 dark:text-brand-400 text-[11px] font-bold hover:bg-brand-100 transition-all"
+              className="ml-auto flex-shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-btn bg-primary-500/10 text-primary-500 text-[11px] font-bold hover:bg-primary-500/20 transition-all"
               title="Importar archivo"
             >
               <UploadIcon /> Importar
@@ -605,7 +604,7 @@ export function BackgroundsPanel({ onClose }) {
                         if (e.key === 'Enter')  handleRename(bg.id)
                         if (e.key === 'Escape') { setEditingId(null); setEditingName('') }
                       }}
-                      className="mt-0.5 w-full px-2 py-1 text-[11px] font-semibold rounded-lg border border-brand-400 dark:border-brand-600 bg-white dark:bg-dark-card outline-none text-slate-900 dark:text-slate-100"
+                      className="mt-0.5 w-full px-2 py-1 text-[11px] font-semibold rounded-btn border border-primary-500 bg-surface-0 outline-none text-ink-1"
                     />
                   ) : (
                     <div
@@ -614,8 +613,8 @@ export function BackgroundsPanel({ onClose }) {
                       className={cn(
                         'px-2 py-1 text-[11px] font-semibold truncate cursor-text -mt-px',
                         isActiveBg(bg)
-                          ? 'bg-brand-50 dark:bg-brand-950/30 text-brand-600 dark:text-brand-400'
-                          : 'bg-white dark:bg-dark-surface text-slate-700 dark:text-slate-300 hover:bg-surface-soft dark:hover:bg-dark-card',
+                          ? 'bg-primary-500/10 text-primary-500'
+                          : 'bg-surface-1 text-ink-2 hover:bg-surface-3',
                       )}
                     >
                       {bg.name}
@@ -624,12 +623,12 @@ export function BackgroundsPanel({ onClose }) {
                 </div>
               ))}
               {backgrounds.length === 0 && (
-                <div className="col-span-3 flex flex-col items-center justify-center py-8 gap-2 text-slate-400">
+                <div className="col-span-3 flex flex-col items-center justify-center py-8 gap-2 text-ink-4">
                   <p className="text-sm">No hay fondos en esta categoría</p>
                   {isFileTab && (
                     <button
                       onClick={() => setEditorTab('file')}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold bg-brand-50 dark:bg-brand-950/30 text-brand-600 dark:text-brand-400 hover:bg-brand-100 transition-all"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-btn text-[11px] font-bold bg-primary-500/10 text-primary-500 hover:bg-primary-500/20 transition-all"
                     >
                       <UploadIcon /> Importar archivo
                     </button>
@@ -643,20 +642,20 @@ export function BackgroundsPanel({ onClose }) {
         {/* ── Divider arrastrable ── */}
         <div
           onMouseDown={onDividerMouseDown}
-          className="flex-shrink-0 h-[6px] flex items-center justify-center cursor-ns-resize group bg-surface-muted dark:bg-dark-border hover:bg-brand-200 dark:hover:bg-brand-900 transition-colors"
+          className="flex-shrink-0 h-[6px] flex items-center justify-center cursor-ns-resize group bg-line-1 hover:bg-primary-500/30 transition-colors"
           title="Arrastra para redimensionar"
         >
-          <div className="w-8 h-0.5 rounded-full bg-slate-300 dark:bg-slate-600 group-hover:bg-brand-400 dark:group-hover:bg-brand-500 transition-colors" />
+          <div className="w-8 h-0.5 rounded-full bg-line-2 group-hover:bg-primary-500 transition-colors" />
         </div>
 
         {/* ── Editor (altura fija, resizable) ── */}
         <div
-          className="flex-shrink-0 bg-white dark:bg-dark-surface border-t border-surface-muted dark:border-dark-border flex flex-col overflow-hidden"
+          className="flex-shrink-0 bg-surface-1 border-t border-line-1 flex flex-col overflow-hidden"
           style={{ height: editorH }}
         >
           {/* Encabezado + selector de tipo a crear */}
-          <div className="px-4 pt-3 pb-2 border-b border-surface-muted dark:border-dark-border flex-shrink-0">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Crear nuevo fondo</p>
+          <div className="px-4 pt-3 pb-2 border-b border-line-1 flex-shrink-0">
+            <p className="text-[10px] font-mono font-medium text-ink-4 uppercase tracking-[1.2px] mb-2">Crear nuevo fondo</p>
             <div className="grid grid-cols-3 gap-2">
               {[
                 { id: 'color',    label: 'Color',     icon: <ColorSwatchIcon /> },
@@ -665,10 +664,10 @@ export function BackgroundsPanel({ onClose }) {
               ].map(t => (
                 <button key={t.id} onClick={() => setEditorTab(t.id)}
                   className={cn(
-                    'flex items-center justify-center gap-1.5 py-2 rounded-xl border-2 text-[12px] font-bold transition-all',
+                    'flex items-center justify-center gap-1.5 py-2 rounded-panel border-2 text-[12px] font-bold transition-all',
                     editorTab === t.id
-                      ? 'border-brand-500 bg-brand-50 dark:bg-brand-950/30 text-brand-600 dark:text-brand-400'
-                      : 'border-surface-muted dark:border-dark-border text-slate-500 hover:border-brand-300 dark:hover:border-brand-700 hover:text-slate-700 dark:hover:text-slate-300',
+                      ? 'border-primary-500 bg-primary-500/10 text-primary-500'
+                      : 'border-line-1 text-ink-3 hover:border-primary-500/40 hover:text-ink-1',
                   )}>
                   {t.icon}
                   {t.label}
@@ -701,12 +700,6 @@ export function BackgroundsPanel({ onClose }) {
         onCancel={() => setConfirmDel(null)}
       />
 
-      <style>{`
-        @keyframes slideInRight {
-          from { transform: translateX(100%); opacity: 0; }
-          to   { transform: translateX(0);    opacity: 1; }
-        }
-      `}</style>
     </>
   )
 }

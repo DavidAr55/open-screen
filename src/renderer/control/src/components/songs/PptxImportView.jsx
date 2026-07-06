@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Button, Input, Spinner, SectionLabel } from '@shared/components/ui/index.jsx'
+import { Button, Input, Spinner, FieldLabel } from '@shared/components/ui/index.jsx'
 import { cn } from '@shared/utils/cn.js'
 
 const BackIcon    = () => <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
@@ -128,7 +128,7 @@ export function PptxImportView({ onDone, onCancel }) {
 
   if (phase === 'picking' || phase === 'loading') {
     return (
-      <main className="flex-1 flex flex-col items-center justify-center gap-3 text-slate-400">
+      <main className="flex-1 flex flex-col items-center justify-center gap-3 text-ink-4">
         <Spinner size={24} />
         <p className="text-sm">{phase === 'picking' ? 'Selecciona un archivo .pptx…' : 'Leyendo diapositivas…'}</p>
       </main>
@@ -138,7 +138,7 @@ export function PptxImportView({ onDone, onCancel }) {
   if (phase === 'error') {
     return (
       <main className="flex-1 flex flex-col items-center justify-center gap-3 p-8">
-        <p className="text-red-500 font-semibold">{error}</p>
+        <p className="text-live-500 font-semibold">{error}</p>
         <Button variant="secondary" onClick={onCancel}>Volver</Button>
       </main>
     )
@@ -149,13 +149,13 @@ export function PptxImportView({ onDone, onCancel }) {
   return (
     <main className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex items-center gap-3 px-5 py-3 border-b border-surface-muted dark:border-dark-border flex-shrink-0">
-        <button onClick={onCancel} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+      <div className="flex items-center gap-3 px-5 py-3 border-b border-line-1 bg-surface-1 flex-shrink-0">
+        <button onClick={onCancel} className="text-ink-4 hover:text-ink-1 transition-colors">
           <BackIcon />
         </button>
         <div className="flex-1 min-w-0">
-          <p className="font-bold text-[15px] text-slate-900 dark:text-white truncate">{fileName}</p>
-          <p className="text-[11px] text-slate-400">
+          <p className="font-bold text-[15px] text-ink-1 truncate">{fileName}</p>
+          <p className="text-[11px] font-mono text-ink-4">
             {includedCount} de {slides.length} diapositivas incluidas · {groups.length} {groups.length === 1 ? 'canción' : 'canciones'}
           </p>
         </div>
@@ -166,36 +166,36 @@ export function PptxImportView({ onDone, onCancel }) {
       </div>
 
       {error && (
-        <div className="px-5 py-2 bg-red-50 dark:bg-red-950/20 border-b border-red-200 dark:border-red-900 flex-shrink-0">
-          <p className="text-[12px] text-red-600 dark:text-red-400">{error}</p>
+        <div className="px-5 py-2 bg-live-500/10 border-b border-live-500/30 flex-shrink-0">
+          <p className="text-[12px] text-live-500">{error}</p>
         </div>
       )}
 
       <div className="flex-1 flex overflow-hidden">
         {/* Lista de slides */}
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
-          <SectionLabel className="mb-1">Diapositivas</SectionLabel>
+          <FieldLabel className="mb-1">Diapositivas</FieldLabel>
           {slides.map((slide, i) => (
             <div key={slide.index}>
               <div
                 className={cn(
-                  'flex items-start gap-3 p-3 rounded-xl border transition-all',
+                  'flex items-start gap-3 p-3 rounded-panel border transition-all',
                   slide.include
-                    ? 'bg-white dark:bg-dark-surface border-surface-muted dark:border-dark-border'
-                    : 'bg-slate-50 dark:bg-dark-card/40 border-transparent opacity-50',
+                    ? 'bg-surface-1 border-line-1'
+                    : 'bg-surface-2 border-transparent opacity-50',
                 )}
               >
                 <input
                   type="checkbox"
                   checked={slide.include}
                   onChange={() => toggleInclude(slide.index)}
-                  className="mt-1 flex-shrink-0"
+                  className="mt-1 flex-shrink-0 accent-primary-500"
                 />
-                <span className="text-[10px] font-mono font-bold text-slate-400 mt-1 flex-shrink-0 w-6">
+                <span className="text-[10px] font-mono font-bold text-ink-4 mt-1 flex-shrink-0 w-6">
                   {slide.index + 1}
                 </span>
-                <p className="flex-1 text-[12.5px] text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
-                  {slide.text || <span className="italic text-slate-400">(sin texto — probablemente solo imagen)</span>}
+                <p className="flex-1 text-[12.5px] text-ink-2 whitespace-pre-wrap leading-relaxed">
+                  {slide.text || <span className="italic text-ink-4">(sin texto — probablemente solo imagen)</span>}
                 </p>
               </div>
 
@@ -205,10 +205,10 @@ export function PptxImportView({ onDone, onCancel }) {
                     onClick={() => toggleBreakpoint(slides[i + 1].index)}
                     title="Marcar como inicio de una nueva canción"
                     className={cn(
-                      'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border transition-all',
+                      'flex items-center gap-1.5 px-2.5 py-1 rounded-btn text-[10px] font-mono font-semibold uppercase tracking-[0.5px] border transition-all',
                       breakpoints.has(slides[i + 1].index)
-                        ? 'bg-brand-600 text-white border-brand-600'
-                        : 'text-slate-400 border-surface-muted dark:border-dark-border hover:border-brand-300 hover:text-brand-500',
+                        ? 'bg-primary-500 text-white border-primary-500'
+                        : 'text-ink-4 border-line-1 hover:border-primary-500/50 hover:text-primary-500',
                     )}
                   >
                     <SplitIcon />
@@ -221,16 +221,16 @@ export function PptxImportView({ onDone, onCancel }) {
         </div>
 
         {/* Panel de canciones a crear */}
-        <div className="w-80 flex-shrink-0 border-l border-surface-muted dark:border-dark-border overflow-y-auto p-4 space-y-3">
-          <SectionLabel className="mb-1">Canciones a crear ({groups.length})</SectionLabel>
+        <div className="w-80 flex-shrink-0 border-l border-line-1 bg-surface-1 overflow-y-auto p-4 space-y-3">
+          <FieldLabel className="mb-1">Canciones a crear ({groups.length})</FieldLabel>
           {groups.length === 0 && (
-            <p className="text-[12px] text-slate-400">Incluye al menos una diapositiva con texto.</p>
+            <p className="text-[12px] text-ink-4">Incluye al menos una diapositiva con texto.</p>
           )}
           {groups.map((group, g) => {
             const info = getGroupInfo(g, group)
             return (
-              <div key={g} className="p-3 rounded-xl border border-surface-muted dark:border-dark-border bg-white dark:bg-dark-surface space-y-2">
-                <p className="text-[10px] font-mono font-bold text-slate-400">
+              <div key={g} className="p-3 rounded-panel border border-line-1 bg-surface-2 space-y-2">
+                <p className="text-[10px] font-mono font-bold text-ink-4">
                   {group.length} {group.length === 1 ? 'diapositiva' : 'diapositivas'}
                 </p>
                 <Input

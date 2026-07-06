@@ -1,23 +1,25 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useApp } from '../context/AppContext.jsx'
-import { Button, Card, Input, Select, SectionLabel, Spinner } from '@shared/components/ui/index.jsx'
+import { Button, Card, Input, Select, FieldLabel, Spinner, SegmentedControl } from '@shared/components/ui/index.jsx'
 import { DEFAULT_BG } from '@shared/constants/defaultBackground.js'
 import { watermarkPreviewStyle } from '@shared/constants/watermark.js'
 import { buildFontFamily } from '@shared/utils/font.js'
 import { cn } from '@shared/utils/cn.js'
 import { ConfirmModal } from '@shared/components/ConfirmModal.jsx'
+import { ContextMenu } from '@shared/components/ContextMenu.jsx'
+import { SlideCanvas } from '@shared/components/SlideCanvas.jsx'
 import { PptxImportView } from '../components/songs/PptxImportView.jsx'
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const SECTION_TYPES = [
-  { value: 'intro',      label: 'Intro',    color: 'bg-slate-100 dark:bg-slate-800 text-slate-500' },
-  { value: 'verse',      label: 'Verso',    color: 'bg-blue-50 dark:bg-blue-950/40 text-blue-500' },
-  { value: 'pre-chorus', label: 'Pre-Coro', color: 'bg-purple-50 dark:bg-purple-950/40 text-purple-500' },
-  { value: 'chorus',     label: 'Coro',     color: 'bg-brand-50 dark:bg-brand-950/40 text-brand-600' },
-  { value: 'bridge',     label: 'Puente',   color: 'bg-amber-50 dark:bg-amber-950/40 text-amber-500' },
-  { value: 'tag',        label: 'Tag',      color: 'bg-green-50 dark:bg-green-950/40 text-green-500' },
-  { value: 'outro',      label: 'Outro',    color: 'bg-slate-100 dark:bg-slate-800 text-slate-500' },
-  { value: 'custom',     label: 'Custom',   color: 'bg-rose-50 dark:bg-rose-950/40 text-rose-500' },
+  { value: 'intro',      label: 'Intro',    color: 'bg-surface-3 text-ink-3' },
+  { value: 'verse',      label: 'Verso',    color: 'bg-blue-500/10 text-blue-500' },
+  { value: 'pre-chorus', label: 'Pre-Coro', color: 'bg-purple-500/10 text-purple-500' },
+  { value: 'chorus',     label: 'Coro',     color: 'bg-primary-500/15 text-primary-500' },
+  { value: 'bridge',     label: 'Puente',   color: 'bg-amber-500/10 text-amber-500' },
+  { value: 'tag',        label: 'Tag',      color: 'bg-emerald-500/10 text-emerald-500' },
+  { value: 'outro',      label: 'Outro',    color: 'bg-surface-3 text-ink-3' },
+  { value: 'custom',     label: 'Custom',   color: 'bg-rose-500/10 text-rose-500' },
 ]
 
 const KEYS = [
@@ -89,8 +91,8 @@ function SectionBadge({ type, active, className }) {
   if (type === 'title') {
     return (
       <span className={cn(
-        'text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0',
-        active ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300',
+        'text-[9px] font-mono font-semibold uppercase tracking-[0.5px] px-1.5 py-0.5 rounded-[3px] flex-shrink-0',
+        active ? 'bg-white/20 text-white' : 'bg-surface-3 text-ink-2',
         className,
       )}>
         Título
@@ -101,7 +103,7 @@ function SectionBadge({ type, active, className }) {
   const meta = getSectionMeta(type)
   return (
     <span className={cn(
-      'text-[10px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0',
+      'text-[9px] font-mono font-semibold uppercase tracking-[0.5px] px-1.5 py-0.5 rounded-[3px] flex-shrink-0',
       active ? 'bg-white/20 text-white' : meta.color,
       className,
     )}>
@@ -111,7 +113,7 @@ function SectionBadge({ type, active, className }) {
 }
 
 // ─── SectionSlide (en vista detalle) ──────────────────────────────────────────
-function SectionSlide({ section, isActive, onClick, onProject }) {
+function SectionSlide({ section, isActive, isLiveSlide, onClick, onProject }) {
   const { projectionClickMode } = useApp()
   const clickTimer = useRef(null)
 
@@ -134,17 +136,20 @@ function SectionSlide({ section, isActive, onClick, onProject }) {
     <div
       onClick={handleClick}
       className={cn(
-        'group flex items-start gap-2 p-2.5 rounded-xl border cursor-pointer transition-all',
+        'group flex items-start gap-2 p-2.5 rounded-panel border cursor-pointer transition-all',
         isActive
-          ? 'bg-brand-50 dark:bg-brand-950/30 border-brand-300 dark:border-brand-800'
-          : 'bg-white dark:bg-dark-surface border-surface-muted dark:border-dark-border hover:border-brand-200 dark:hover:border-brand-900',
+          ? 'bg-primary-500/10 border-primary-500/50'
+          : 'bg-surface-1 border-line-1 hover:border-primary-500/30',
       )}
       title={projectionClickMode === 'single' ? 'Clic: proyectar' : 'Doble clic: proyectar'}
     >
       <SectionBadge type={section.type} className="mt-0.5" />
       <div className="flex-1 min-w-0">
-        <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate">{section.label}</p>
-        <p className="text-[11px] text-slate-400 dark:text-slate-600 truncate mt-0.5">
+        <p className="text-[11px] font-semibold text-ink-2 truncate">
+          {isLiveSlide && <span className="inline-block w-1.5 h-1.5 rounded-full bg-live-500 animate-blink mr-1 align-middle" title="En vivo" />}
+          {section.label}
+        </p>
+        <p className="text-[11px] text-ink-4 truncate mt-0.5">
           {section._isTitleSlide ? (section._meta || '—') : (section.lyrics || '').split('\n')[0]}
         </p>
       </div>
@@ -172,7 +177,7 @@ function AutoTextarea({ value, onChange, placeholder, className }) {
       className={cn(
         'w-full px-3 py-2.5 text-[13px] leading-relaxed font-mono',
         'bg-transparent border-0 outline-none resize-none',
-        'text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-600',
+        'text-ink-1 placeholder:text-ink-4',
         className,
       )}
       style={{ minHeight: 80, overflow: 'hidden' }}
@@ -273,7 +278,7 @@ function SongEditor({ song, onSave, onCancel }) {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* ── Header: metadatos ─────────────────────────────────────────────── */}
-      <div className="flex-shrink-0 px-6 py-4 border-b border-surface-muted dark:border-dark-border bg-white dark:bg-dark-surface">
+      <div className="flex-shrink-0 px-6 py-4 border-b border-line-1 bg-surface-1">
         <div className="flex gap-4 items-end">
           <div className="flex-1 min-w-0">
             <input
@@ -283,18 +288,18 @@ function SongEditor({ song, onSave, onCancel }) {
               onChange={e => { setTitle(e.target.value); setError(null) }}
               className={cn(
                 'w-full text-2xl font-extrabold bg-transparent outline-none',
-                'text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-700',
+                'text-ink-1 placeholder:text-ink-4',
                 'border-b-2 pb-1 transition-colors',
                 error && !title.trim()
-                  ? 'border-red-400'
-                  : 'border-transparent focus:border-brand-500',
+                  ? 'border-live-400'
+                  : 'border-transparent focus:border-primary-500',
               )}
             />
-            {error && <p className="text-[11px] text-red-500 mt-1">{error}</p>}
+            {error && <p className="text-[11px] text-live-500 mt-1">{error}</p>}
           </div>
 
           <div className="w-52 flex-shrink-0">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Artista / Autor</p>
+            <p className="text-[10px] font-mono font-medium text-ink-4 uppercase tracking-[1.2px] mb-1">Artista / Autor</p>
             <input
               type="text"
               placeholder="Artista"
@@ -302,21 +307,21 @@ function SongEditor({ song, onSave, onCancel }) {
               onChange={e => setArtist(e.target.value)}
               className={cn(
                 'w-full text-[14px] font-medium bg-transparent outline-none',
-                'text-slate-700 dark:text-slate-300 placeholder:text-slate-300 dark:placeholder:text-slate-700',
-                'border-b border-surface-muted dark:border-dark-border focus:border-brand-400 pb-0.5 transition-colors',
+                'text-ink-2 placeholder:text-ink-4',
+                'border-b border-line-1 focus:border-primary-500 pb-0.5 transition-colors',
               )}
             />
           </div>
 
           <div className="flex-shrink-0">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Tono</p>
+            <p className="text-[10px] font-mono font-medium text-ink-4 uppercase tracking-[1.2px] mb-1">Tono</p>
             <select
               value={keySig}
               onChange={e => setKeySig(e.target.value)}
               className={cn(
                 'text-[13px] font-mono font-bold bg-transparent outline-none cursor-pointer',
-                'text-slate-700 dark:text-slate-300 border-b border-surface-muted dark:border-dark-border',
-                'focus:border-brand-400 pb-0.5 pr-2 transition-colors',
+                'text-ink-2 border-b border-line-1',
+                'focus:border-primary-500 pb-0.5 pr-2 transition-colors',
               )}
             >
               <option value="">—</option>
@@ -329,7 +334,7 @@ function SongEditor({ song, onSave, onCancel }) {
       {/* ── Área de secciones (scroll independiente) ──────────────────────── */}
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
         {sections.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 gap-2 text-slate-400">
+          <div className="flex flex-col items-center justify-center py-16 gap-2 text-ink-4">
             <svg width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
               <path d="M9 18V5l12-2v13" />
               <circle cx="6" cy="18" r="3" />
@@ -353,17 +358,17 @@ function SongEditor({ song, onSave, onCancel }) {
               onDrop={() => handleDrop(i)}
               onDragEnd={() => { setDragFrom(null); setDragOver(null) }}
               className={cn(
-                'rounded-2xl border overflow-hidden',
+                'rounded-card border overflow-hidden',
                 'transition-[border-color,box-shadow,transform,opacity] duration-200',
-                isTarget  && 'border-brand-400 dark:border-brand-600 shadow-brand scale-[1.01]',
+                isTarget  && 'border-primary-400 shadow-card-md scale-[1.01]',
                 isDragged && 'opacity-30 scale-[0.98]',
-                isFlash   && !isDragged && !isTarget && 'section-flash border-brand-400 dark:border-brand-600',
-                !isTarget && !isDragged && !isFlash && 'border-surface-muted dark:border-dark-border',
-                'bg-white dark:bg-dark-surface',
+                isFlash   && !isDragged && !isTarget && 'animate-section-flash border-primary-400',
+                !isTarget && !isDragged && !isFlash && 'border-line-1',
+                'bg-surface-1',
               )}
             >
               <div className="flex items-center gap-2 px-3 pt-3 pb-2">
-                <span className="flex-shrink-0 text-slate-300 dark:text-slate-700 cursor-grab active:cursor-grabbing">
+                <span className="flex-shrink-0 text-ink-4 cursor-grab active:cursor-grabbing">
                   <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
                     <circle cx="3" cy="2.5" r="1.2"/><circle cx="7" cy="2.5" r="1.2"/>
                     <circle cx="3" cy="7" r="1.2"/><circle cx="7" cy="7" r="1.2"/>
@@ -380,7 +385,7 @@ function SongEditor({ song, onSave, onCancel }) {
                     updateSection(i, 'label', newLabel)
                   }}
                   className={cn(
-                    'text-[10px] font-bold px-2 py-1 rounded-full border-0 outline-none cursor-pointer',
+                    'text-[10px] font-mono font-semibold uppercase tracking-[0.5px] px-2 py-1 rounded-[3px] border-0 outline-none cursor-pointer',
                     meta.color,
                   )}
                 >
@@ -394,8 +399,8 @@ function SongEditor({ song, onSave, onCancel }) {
                   placeholder="Etiqueta"
                   className={cn(
                     'flex-1 text-[13px] font-semibold bg-transparent outline-none',
-                    'text-slate-700 dark:text-slate-300 placeholder:text-slate-400',
-                    'border-b border-transparent focus:border-slate-300 dark:focus:border-slate-600',
+                    'text-ink-2 placeholder:text-ink-4',
+                    'border-b border-transparent focus:border-line-2',
                   )}
                 />
 
@@ -404,7 +409,7 @@ function SongEditor({ song, onSave, onCancel }) {
                     onClick={() => moveSection(i, 'up')}
                     disabled={i === 0}
                     title="Subir"
-                    className="p-1.5 rounded-lg hover:bg-surface-soft dark:hover:bg-dark-card text-slate-500 disabled:opacity-20 transition-all"
+                    className="p-1.5 rounded-btn hover:bg-surface-3 text-ink-3 disabled:opacity-20 transition-all"
                   >
                     <UpIcon />
                   </button>
@@ -412,21 +417,21 @@ function SongEditor({ song, onSave, onCancel }) {
                     onClick={() => moveSection(i, 'down')}
                     disabled={i === sections.length - 1}
                     title="Bajar"
-                    className="p-1.5 rounded-lg hover:bg-surface-soft dark:hover:bg-dark-card text-slate-500 disabled:opacity-20 transition-all"
+                    className="p-1.5 rounded-btn hover:bg-surface-3 text-ink-3 disabled:opacity-20 transition-all"
                   >
                     <DownIcon />
                   </button>
                   <button
                     onClick={() => removeSection(i)}
                     title="Eliminar sección"
-                    className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 text-slate-400 hover:text-red-500 transition-all"
+                    className="p-1.5 rounded-btn hover:bg-live-500/10 text-ink-4 hover:text-live-500 transition-all"
                   >
                     <TrashIcon />
                   </button>
                 </div>
               </div>
 
-              <div className="mx-3 h-px bg-surface-muted dark:bg-dark-border" />
+              <div className="mx-3 h-px bg-line-1" />
 
               <AutoTextarea
                 value={section.lyrics}
@@ -441,9 +446,9 @@ function SongEditor({ song, onSave, onCancel }) {
       </div>
 
       {/* ── Footer sticky: botones de añadir + guardar ───────────────────── */}
-      <div className="flex-shrink-0 border-t border-surface-muted dark:border-dark-border bg-white dark:bg-dark-surface">
-        <div className="px-6 py-2 flex items-center gap-1.5 flex-wrap border-b border-surface-muted dark:border-dark-border">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1 flex-shrink-0">
+      <div className="flex-shrink-0 border-t border-line-1 bg-surface-1">
+        <div className="px-6 py-2 flex items-center gap-1.5 flex-wrap border-b border-line-1">
+          <span className="text-[10px] font-mono font-medium text-ink-4 uppercase tracking-[1.2px] mr-1 flex-shrink-0">
             Añadir:
           </span>
           {QUICK_ADD.map(t => {
@@ -453,7 +458,7 @@ function SongEditor({ song, onSave, onCancel }) {
                 key={t}
                 onClick={() => addSection(t)}
                 className={cn(
-                  'text-[11px] font-bold px-3 py-1.5 rounded-full border transition-all hover:scale-105 active:scale-95',
+                  'text-[10px] font-mono font-semibold uppercase tracking-[0.5px] px-3 py-1.5 rounded-btn border transition-all hover:scale-105 active:scale-95',
                   m.color,
                   'border-current/30',
                 )}
@@ -467,7 +472,7 @@ function SongEditor({ song, onSave, onCancel }) {
         <div className="px-6 py-3 flex gap-3">
           <button
             onClick={onCancel}
-            className="flex-1 py-2.5 rounded-xl text-[13px] font-semibold border border-surface-muted dark:border-dark-border text-slate-600 dark:text-slate-300 hover:bg-surface-soft dark:hover:bg-dark-card transition-all"
+            className="flex-1 py-2.5 rounded-btn text-[13px] font-semibold border border-line-2 text-ink-2 hover:bg-surface-3 transition-all"
           >
             Cancelar
           </button>
@@ -475,9 +480,8 @@ function SongEditor({ song, onSave, onCancel }) {
             onClick={handleSave}
             disabled={saving || !title.trim()}
             className={cn(
-              'flex-[2] py-2.5 rounded-xl text-[13px] font-bold text-white transition-all',
-              'bg-brand-600 hover:bg-brand-700 shadow-brand',
-              'hover:-translate-y-px active:translate-y-0',
+              'flex-[2] py-2.5 rounded-btn text-[13px] font-bold transition-all',
+              'bg-primary-200 text-neutral-950 hover:bg-primary-300',
               'disabled:opacity-50 disabled:pointer-events-none',
             )}
           >
@@ -485,24 +489,12 @@ function SongEditor({ song, onSave, onCancel }) {
           </button>
         </div>
       </div>
-
-      {/* Keyframes para el flash de reordenamiento */}
-      <style>{`
-        @keyframes sectionFlash {
-          0%   { box-shadow: 0 0 0 0 rgba(229, 29, 29, 0.5); background-color: rgba(229,29,29,0.08); }
-          40%  { box-shadow: 0 0 0 6px rgba(229, 29, 29, 0.15); background-color: rgba(229,29,29,0.12); }
-          100% { box-shadow: 0 0 0 0 rgba(229, 29, 29, 0); background-color: transparent; }
-        }
-        .section-flash {
-          animation: sectionFlash 0.45s cubic-bezier(.36,.07,.19,.97) forwards;
-        }
-      `}</style>
     </div>
   )
 }
 
 // ─── Slide mini-preview (para el modo grid) ───────────────────────────────────
-function SlideGridCard({ section, isActive, index, total, onSelect, onProject, effectiveBg }) {
+function SlideGridCard({ section, isActive, isLiveSlide, index, total, onSelect, onProject, effectiveBg }) {
   const { projectionFontFamily } = useApp()
   const lines = (section.lyrics || '').split('\n').length
   const fontSize = lines > 6 ? 5 : lines > 4 ? 6 : lines > 2 ? 7 : 9
@@ -513,11 +505,13 @@ function SlideGridCard({ section, isActive, index, total, onSelect, onProject, e
       onClick={() => { onSelect(); onProject() }}
       title="Clic: proyectar"
       className={cn(
-        'relative rounded-xl overflow-hidden cursor-pointer transition-all group',
+        'relative rounded-panel overflow-hidden cursor-pointer transition-all group',
         'border-2',
-        isActive
-          ? 'border-brand-500 shadow-brand scale-[1.02]'
-          : 'border-transparent hover:border-brand-300 dark:hover:border-brand-700 hover:scale-[1.01]',
+        isLiveSlide
+          ? 'border-live-500 shadow-[0_0_12px_rgb(255_59_48/.35)] scale-[1.02]'
+          : isActive
+            ? 'border-primary-500 scale-[1.02]'
+            : 'border-transparent hover:border-primary-500/50 hover:scale-[1.01]',
       )}
       style={{ aspectRatio: '16/9' }}
     >
@@ -542,8 +536,14 @@ function SlideGridCard({ section, isActive, index, total, onSelect, onProject, e
         {index + 1}/{total}
       </div>
 
+      {isLiveSlide && (
+        <div className="absolute top-1.5 right-2 flex items-center gap-1 font-mono text-live-500 text-[8px] font-bold uppercase tracking-[0.5px] select-none">
+          <span className="w-1 h-1 rounded-full bg-live-500 animate-blink" /> Live
+        </div>
+      )}
+
       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
-        <div className="bg-brand-600/90 text-white rounded-full p-1.5">
+        <div className="bg-primary-500/90 text-white rounded-full p-1.5">
           <ProjectIcon />
         </div>
       </div>
@@ -566,12 +566,13 @@ function SlideGridCard({ section, isActive, index, total, onSelect, onProject, e
 
 // ─── Detalle de canción ───────────────────────────────────────────────────────
 function SongDetail({ song, activeBg, sidebarCollapsed, onToggleSidebar, onEdit, onDelete, onProjectSection, isLive, onClearLive }) {
-  const { isNavNext, isNavPrev, projectionClickMode, setNextText, projectionFontFamily, watermark } = useApp()
-  const allSections = buildAllSections(song)
+  const { isNavNext, isNavPrev, projectionClickMode, setNextText, projectionFontFamily, projFontSize, watermark,
+          registerTransport, clearSignal } = useApp()
+  const allSections = useMemo(() => buildAllSections(song), [song])
   const [activeIdx, setActiveIdx] = useState(0)
+  const [liveIdx, setLiveIdx] = useState(null)
   const [detailView, setDetailView] = useState('list')
   const effectiveBg = activeBg ?? DEFAULT_BG
-  const isMedia = effectiveBg.type === 'image' || effectiveBg.type === 'gif' || effectiveBg.type === 'video'
   const activeSection = allSections[activeIdx]
 
   // Vista previa de "lo próximo" para el panel de Escenario
@@ -582,6 +583,7 @@ function SongDetail({ song, activeBg, sidebarCollapsed, onToggleSidebar, onEdit,
 
   const handleProjectSection = useCallback((section) => {
     if (!section) return
+    setLiveIdx(allSections.indexOf(section))
 
     if (section._isTitleSlide) {
       const sub = section._meta ? `— ${section._meta}` : ''
@@ -593,21 +595,34 @@ function SongDetail({ song, activeBg, sidebarCollapsed, onToggleSidebar, onEdit,
     } else {
       onProjectSection(section)
     }
-  }, [onProjectSection])
+  }, [onProjectSection, allSections])
 
-  const goPrev = () => {
+  // La señal de limpieza global y el apagado quitan el indicador de en vivo
+  useEffect(() => { setLiveIdx(null) }, [clearSignal])
+  useEffect(() => { if (!isLive) setLiveIdx(null) }, [isLive])
+
+  const goPrev = useCallback(() => {
     if (activeIdx <= 0) return
     const newIdx = activeIdx - 1
     setActiveIdx(newIdx)
     handleProjectSection(allSections[newIdx])
-  }
+  }, [activeIdx, allSections, handleProjectSection])
 
-  const goNext = () => {
+  const goNext = useCallback(() => {
     if (activeIdx >= allSections.length - 1) return
     const newIdx = activeIdx + 1
     setActiveIdx(newIdx)
     handleProjectSection(allSections[newIdx])
-  }
+  }, [activeIdx, allSections, handleProjectSection])
+
+  // ── Transport global (barra inferior): prev/next de secciones ──────────────
+  useEffect(() => {
+    return registerTransport({
+      onPrev: goPrev,
+      onNext: goNext,
+      label: `${activeIdx + 1}/${allSections.length}`,
+    })
+  }, [goPrev, goNext, activeIdx, allSections.length, registerTransport])
 
   useEffect(() => {
     const handler = (e) => {
@@ -638,69 +653,37 @@ function SongDetail({ song, activeBg, sidebarCollapsed, onToggleSidebar, onEdit,
     <div className="flex flex-col gap-3 h-full overflow-hidden">
       <div className="flex items-start justify-between flex-shrink-0 gap-3">
         <div className="flex-1 min-w-0">
-          <h2 className="font-extrabold text-xl text-slate-900 dark:text-white truncate">{song.title}</h2>
+          <h2 className="font-extrabold text-xl text-ink-1 truncate">{song.title}</h2>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
-            {song.artist && <span className="text-[12px] text-slate-400">{song.artist}</span>}
-            {song.key_sig && <span className="text-[11px] font-mono font-bold bg-brand-50 dark:bg-brand-950/30 text-brand-600 dark:text-brand-400 px-2 py-0.5 rounded-md border border-brand-200 dark:border-brand-900">{song.key_sig}</span>}
-            {song.tempo && <span className="text-[11px] text-slate-400 font-mono">{song.tempo} BPM</span>}
-            {song.copyright && <span className="text-[10px] text-slate-400 italic">© {song.copyright}</span>}
+            {song.artist && <span className="text-[12px] text-ink-3">{song.artist}</span>}
+            {song.key_sig && <span className="text-[11px] font-mono font-bold bg-primary-500/10 text-primary-500 px-2 py-0.5 rounded-btn border border-primary-500/30">{song.key_sig}</span>}
+            {song.tempo && <span className="text-[11px] text-ink-3 font-mono">{song.tempo} BPM</span>}
+            {song.copyright && <span className="text-[10px] text-ink-4 italic">© {song.copyright}</span>}
           </div>
         </div>
 
         <div className="flex gap-2 flex-shrink-0 items-center">
-          <div className="flex rounded-lg overflow-hidden border border-surface-muted dark:border-dark-border">
-            <button
-              onClick={() => setDetailView('list')}
-              title="Vista de lista"
-              className={cn(
-                'px-2.5 py-1.5 transition-colors',
-                detailView === 'list'
-                  ? 'bg-brand-600 text-white'
-                  : 'bg-white dark:bg-dark-surface text-slate-400 hover:text-slate-600 dark:hover:text-slate-300',
-              )}
-            >
-              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <line x1="8" y1="6" x2="21" y2="6" />
-                <line x1="8" y1="12" x2="21" y2="12" />
-                <line x1="8" y1="18" x2="21" y2="18" />
-                <line x1="3" y1="6" x2="3.01" y2="6" />
-                <line x1="3" y1="12" x2="3.01" y2="12" />
-                <line x1="3" y1="18" x2="3.01" y2="18" />
-              </svg>
-            </button>
-            <button
-              onClick={() => setDetailView('grid')}
-              title="Vista de cuadrícula"
-              className={cn(
-                'px-2.5 py-1.5 transition-colors border-l border-surface-muted dark:border-dark-border',
-                detailView === 'grid'
-                  ? 'bg-brand-600 text-white'
-                  : 'bg-white dark:bg-dark-surface text-slate-400 hover:text-slate-600 dark:hover:text-slate-300',
-              )}
-            >
-              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="3" width="7" height="7" />
-                <rect x="14" y="3" width="7" height="7" />
-                <rect x="3" y="14" width="7" height="7" />
-                <rect x="14" y="14" width="7" height="7" />
-              </svg>
-            </button>
-          </div>
+          <SegmentedControl
+            size="sm"
+            options={[
+              { value: 'list', label: 'Lista' },
+              { value: 'grid', label: 'Grid' },
+            ]}
+            value={detailView}
+            onChange={setDetailView}
+          />
 
           <Button variant="secondary" size="sm" onClick={() => onEdit(song)}>
             <EditIcon /> Editar
           </Button>
 
           {isLive ? (
-            <button
-              onClick={onClearLive}
-              className="flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] font-bold text-white bg-slate-700 hover:bg-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-600 transition-all"
-            >
+            <Button variant="danger" size="md" onClick={onClearLive}>
               <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                 <rect x="3" y="3" width="18" height="18" rx="2" />
               </svg>
               Dejar de presentar
-            </button>
+            </Button>
           ) : (
             <Button size="md" onClick={() => handleProjectSection(activeSection)}>
               <ProjectIcon /> Proyectar
@@ -711,10 +694,10 @@ function SongDetail({ song, activeBg, sidebarCollapsed, onToggleSidebar, onEdit,
             onClick={onToggleSidebar}
             title={sidebarCollapsed ? 'Mostrar buscador de canciones' : 'Ocultar buscador de canciones'}
             className={cn(
-              'p-2 transition-colors rounded-lg',
+              'p-2 transition-colors rounded-btn',
               sidebarCollapsed
-                ? 'text-brand-500 bg-brand-50 dark:bg-brand-950/20'
-                : 'text-slate-400 hover:text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-950/20',
+                ? 'text-primary-500 bg-primary-500/10'
+                : 'text-ink-4 hover:text-primary-500 hover:bg-primary-500/10',
             )}
           >
             <PanelIcon />
@@ -722,7 +705,7 @@ function SongDetail({ song, activeBg, sidebarCollapsed, onToggleSidebar, onEdit,
 
           <button
             onClick={() => onDelete(song.id)}
-            className="p-2 text-slate-400 hover:text-red-500 transition-colors rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20"
+            className="p-2 text-ink-4 hover:text-live-500 transition-colors rounded-btn hover:bg-live-500/10"
           >
             <TrashIcon />
           </button>
@@ -732,16 +715,17 @@ function SongDetail({ song, activeBg, sidebarCollapsed, onToggleSidebar, onEdit,
       {detailView === 'list' && (
         <div className="flex gap-4 flex-1 overflow-hidden">
           <div className="w-56 flex-shrink-0 overflow-y-auto space-y-1.5">
-            <SectionLabel className="mb-2">
+            <FieldLabel className="mb-2">
               Secciones ({allSections.length})
-              <span className="ml-1 text-slate-300 dark:text-slate-700 font-normal normal-case tracking-normal">· {projectionClickMode === 'single' ? 'clic proyecta' : 'doble clic proyecta'}</span>
-            </SectionLabel>
+              <span className="ml-1 text-ink-4 font-normal normal-case tracking-normal">· {projectionClickMode === 'single' ? 'clic proyecta' : 'doble clic proyecta'}</span>
+            </FieldLabel>
 
             {allSections.map((section, idx) => (
               <SectionSlide
                 key={idx}
                 section={section}
                 isActive={activeIdx === idx}
+                isLiveSlide={isLive && liveIdx === idx}
                 onClick={() => setActiveIdx(idx)}
                 onProject={() => handleProjectSection(section)}
               />
@@ -749,50 +733,26 @@ function SongDetail({ song, activeBg, sidebarCollapsed, onToggleSidebar, onEdit,
           </div>
 
           <div className="flex-1 flex flex-col gap-3 overflow-hidden">
-            <div className="slide-canvas flex-shrink-0" style={{ maxHeight: '60%' }}>
-              {!isMedia && <div className="absolute inset-0 transition-all duration-500" style={{ background: effectiveBg.value }} />}
-              {(effectiveBg.type === 'image' || effectiveBg.type === 'gif') && (
-                <>
-                  <img src={effectiveBg.thumbnail || effectiveBg.value} alt="" className="absolute inset-0 w-full h-full object-cover" />
-                  <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.38)' }} />
-                </>
-              )}
-              {effectiveBg.type === 'video' && (
-                <>
-                  <video key={effectiveBg.value} src={effectiveBg.value} loop muted autoPlay playsInline onCanPlay={e => e.target.play().catch(() => {})} className="absolute inset-0 w-full h-full object-cover" />
-                  <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.4)' }} />
-                </>
-              )}
-              <span className="absolute top-2.5 left-3 font-mono text-[10px] text-white/20 tracking-wider">PREVIEW</span>
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 gap-2 overflow-hidden">
-                {activeSection && (
-                  <>
-                    <p
-                      className="text-white font-bold text-center leading-snug whitespace-pre-wrap"
-                      style={{
-                        fontFamily: buildFontFamily(projectionFontFamily),
-                        fontSize: 'clamp(11px, 2.4vw, 24px)',
-                        textShadow: '0 2px 24px rgba(0,0,0,.8)',
-                        maxWidth: '100%',
-                        overflowWrap: 'break-word',
-                      }}
-                    >
-                      {activeSection.lyrics}
-                    </p>
-                    {activeSection._isTitleSlide && (
-                      <p className="text-white/40 text-center" style={{ fontFamily: buildFontFamily(projectionFontFamily), fontSize: 'clamp(8px, 1vw, 12px)' }}>
-                        {activeSection._meta}
-                      </p>
-                    )}
-                  </>
-                )}
-              </div>
-
+            <SlideCanvas
+              bg={effectiveBg}
+              text={activeSection
+                ? (activeSection._isTitleSlide && activeSection._meta
+                    ? `${activeSection.lyrics}\n\n— ${activeSection._meta}`
+                    : activeSection.lyrics)
+                : ''}
+              fontFamily={projectionFontFamily}
+              fontSizeMode={projFontSize}
+              label={isLive && liveIdx === activeIdx ? 'En vivo' : 'Preview'}
+              live={isLive && liveIdx === activeIdx}
+              video
+              className="flex-shrink-0"
+              style={{ maxHeight: '60%' }}
+            >
               {watermark?.enabled && watermark.image && (
                 <img src={watermark.image} alt="" className="absolute pointer-events-none select-none"
                   style={watermarkPreviewStyle(watermark)} />
               )}
-            </div>
+            </SlideCanvas>
 
             <NavBar
               activeIdx={activeIdx}
@@ -817,6 +777,7 @@ function SongDetail({ song, activeBg, sidebarCollapsed, onToggleSidebar, onEdit,
                   index={idx}
                   total={allSections.length}
                   isActive={activeIdx === idx}
+                  isLiveSlide={isLive && liveIdx === idx}
                   effectiveBg={effectiveBg}
                   onSelect={() => setActiveIdx(idx)}
                   onProject={() => {
@@ -846,127 +807,24 @@ function SongDetail({ song, activeBg, sidebarCollapsed, onToggleSidebar, onEdit,
 function NavBar({ activeIdx, total, label, onPrev, onNext, onProject }) {
   return (
     <div className="flex items-center gap-2 flex-shrink-0">
-      <button
-        disabled={activeIdx <= 0}
-        onClick={onPrev}
-        className={cn(
-          'flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-semibold',
-          'border transition-all',
-          activeIdx <= 0
-            ? 'border-surface-muted dark:border-dark-border text-slate-300 dark:text-slate-700 cursor-not-allowed'
-            : 'border-surface-muted dark:border-dark-border text-slate-600 dark:text-slate-300',
-          activeIdx > 0 && 'hover:border-brand-300 dark:hover:border-brand-700 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/20',
-        )}
-      >
+      <Button variant="outline" size="md" disabled={activeIdx <= 0} onClick={onPrev}>
         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
           <path d="M15 18l-6-6 6-6" />
         </svg>
         Anterior
-      </button>
+      </Button>
 
-      <button
-        onClick={onProject}
-        className={cn(
-          'flex-1 flex items-center justify-center gap-2',
-          'py-2.5 rounded-xl text-[13px] font-bold text-white',
-          'bg-brand-600 hover:bg-brand-700 transition-all',
-          'shadow-brand hover:shadow-brand-lg hover:-translate-y-px active:translate-y-0',
-        )}
-      >
+      <Button variant="primary" size="lg" className="flex-1" onClick={onProject}>
         <ProjectIcon />
         {label ? `Proyectar "${label}"` : 'Proyectar'}
-      </button>
+      </Button>
 
-      <button
-        disabled={activeIdx >= total - 1}
-        onClick={onNext}
-        className={cn(
-          'flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-semibold',
-          'border transition-all',
-          activeIdx >= total - 1
-            ? 'border-surface-muted dark:border-dark-border text-slate-300 dark:text-slate-700 cursor-not-allowed'
-            : 'border-surface-muted dark:border-dark-border text-slate-600 dark:text-slate-300',
-          activeIdx < total - 1 && 'hover:border-brand-300 dark:hover:border-brand-700 hover:text-brand-600 dark:hover:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-950/20',
-        )}
-      >
+      <Button variant="outline" size="md" disabled={activeIdx >= total - 1} onClick={onNext}>
         Siguiente
         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
           <path d="M9 18l6-6-6-6" />
         </svg>
-      </button>
-    </div>
-  )
-}
-
-// ─── Página principal ─────────────────────────────────────────────────────────
-// ─── Song context menu ────────────────────────────────────────────────────────
-function SongContextMenu({
-  x, y, song, index, total,
-  onProject, onEdit, onDelete, onToggleFav, onMoveUp, onMoveDown, onSaveToLibrary, onClose,
-}) {
-  const ref = useRef(null)
-
-  useEffect(() => {
-    const handle = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) onClose()
-    }
-    const t = setTimeout(() => document.addEventListener('mousedown', handle), 50)
-    return () => {
-      clearTimeout(t)
-      document.removeEventListener('mousedown', handle)
-    }
-  }, [onClose])
-
-  const style = {
-    position: 'fixed',
-    top: Math.min(y, window.innerHeight - 280),
-    left: Math.min(x, window.innerWidth - 220),
-    zIndex: 9999,
-  }
-
-  const Sep = () => <div className="my-1 h-px bg-surface-muted dark:bg-dark-border mx-2" />
-
-  const MI = ({ icon, label, onClick, danger, disabled }) => (
-    <button
-      disabled={disabled}
-      onClick={() => { onClick(); onClose() }}
-      className={cn(
-        'w-full flex items-center gap-2.5 px-3 py-1.5 text-[12.5px] font-medium transition-colors text-left',
-        'disabled:opacity-35 disabled:pointer-events-none',
-        danger
-          ? 'text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30'
-          : 'text-slate-700 dark:text-slate-300 hover:bg-surface-soft dark:hover:bg-dark-card',
-      )}
-    >
-      {icon && <span className="opacity-60 flex-shrink-0">{icon}</span>}
-      {label}
-    </button>
-  )
-
-  return (
-    <div
-      ref={ref}
-      style={style}
-      className="w-52 py-1.5 rounded-xl bg-white dark:bg-dark-surface border border-surface-muted dark:border-dark-border shadow-card-md"
-    >
-      <div className="px-3 py-2 border-b border-surface-muted dark:border-dark-border mb-1">
-        <p className="text-[12px] font-bold text-slate-800 dark:text-slate-200 truncate">{song.title}</p>
-        {song.artist && <p className="text-[10px] text-slate-400 truncate">{song.artist}</p>}
-      </div>
-      <MI icon={<ProjectIcon />} label="Proyectar" onClick={onProject} />
-      <MI icon={<EditIcon />} label="Editar" onClick={onEdit} />
-      <MI icon={<SaveIcon />} label="Guardar en biblioteca" onClick={onSaveToLibrary} />
-      <Sep />
-      <MI
-        icon={<StarIcon filled={song.is_favorite} />}
-        label={song.is_favorite ? 'Quitar de favoritos' : 'Marcar favorito'}
-        onClick={onToggleFav}
-      />
-      <Sep />
-      <MI icon={<UpIcon />} label="Subir" onClick={onMoveUp} disabled={index <= 0} />
-      <MI icon={<DownIcon />} label="Bajar" onClick={onMoveDown} disabled={index >= total - 1} />
-      <Sep />
-      <MI icon={<TrashIcon />} label="Eliminar" onClick={onDelete} danger />
+      </Button>
     </div>
   )
 }
@@ -1002,7 +860,7 @@ function SongListItem({
   }
 
   const DragHandle = () => (
-    <span className="flex-shrink-0 text-slate-300 dark:text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing mt-0.5">
+    <span className="flex-shrink-0 text-ink-4 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing mt-0.5">
       <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor">
         <circle cx="3" cy="2.5" r="1.2"/><circle cx="7" cy="2.5" r="1.2"/>
         <circle cx="3" cy="7" r="1.2"/><circle cx="7" cy="7" r="1.2"/>
@@ -1023,55 +881,57 @@ function SongListItem({
         onContextMenu={handleContextMenu}
         title="Clic: seleccionar · Doble clic: proyectar · Clic derecho: opciones"
         className={cn(
-          'group w-full flex items-start gap-2 p-3 rounded-xl border cursor-pointer transition-all duration-100 select-none',
-          isDragOver && 'border-brand-400 dark:border-brand-600 bg-brand-50/50 dark:bg-brand-950/20 scale-[1.01]',
+          'group w-full flex items-start gap-2 p-3 rounded-panel border cursor-pointer transition-all duration-100 select-none',
+          isDragOver && 'border-primary-400 bg-primary-500/10 scale-[1.01]',
           isDragging && 'opacity-25 scale-95',
-          isActive && !isDragOver && 'bg-brand-50 dark:bg-brand-950/30 border-brand-200 dark:border-brand-900',
-          !isActive && !isDragOver && 'bg-white dark:bg-dark-surface border-transparent hover:border-surface-muted dark:hover:border-dark-border',
+          isActive && !isDragOver && 'bg-primary-500/10 border-primary-500/40',
+          !isActive && !isDragOver && 'bg-surface-1 border-transparent hover:border-line-1',
         )}
       >
         <DragHandle />
         <div className="flex-1 min-w-0">
           <p className={cn(
             'text-[13px] font-semibold truncate',
-            isActive ? 'text-brand-700 dark:text-brand-300' : 'text-slate-800 dark:text-slate-200',
+            isActive ? 'text-primary-500' : 'text-ink-1',
           )}>
             {song.title}
           </p>
-          {song.artist && <p className="text-[11px] text-slate-400 truncate">{song.artist}</p>}
+          {song.artist && <p className="text-[11px] text-ink-4 truncate">{song.artist}</p>}
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {song.key_sig && (
-            <span className="text-[10px] font-mono font-bold bg-surface-soft dark:bg-dark-card text-slate-500 px-1.5 py-0.5 rounded">
+            <span className="text-[10px] font-mono font-bold bg-surface-3 text-ink-3 px-1.5 py-0.5 rounded-[3px]">
               {song.key_sig}
             </span>
           )}
           <button
             onClick={e => { e.stopPropagation(); onToggleFav() }}
-            className={cn('transition-colors', song.is_favorite ? 'text-amber-400' : 'text-slate-300 hover:text-amber-400')}
+            className={cn('transition-colors', song.is_favorite ? 'text-warn-500' : 'text-ink-4 hover:text-warn-500')}
           >
             <StarIcon filled={song.is_favorite} />
           </button>
         </div>
       </div>
 
-      {ctx && (
-        <SongContextMenu
-          x={ctx.x}
-          y={ctx.y}
-          song={song}
-          index={index}
-          total={total}
-          onProject={onProject}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onToggleFav={onToggleFav}
-          onMoveUp={onMoveUp}
-          onMoveDown={onMoveDown}
-          onSaveToLibrary={onSaveToLibrary}
-          onClose={() => setCtx(null)}
-        />
-      )}
+      <ContextMenu
+        open={!!ctx}
+        x={ctx?.x ?? 0}
+        y={ctx?.y ?? 0}
+        title={song.artist ? `${song.title} · ${song.artist}` : song.title}
+        items={[
+          { icon: <ProjectIcon />, label: 'Proyectar', onClick: onProject },
+          { icon: <EditIcon />,    label: 'Editar', onClick: onEdit },
+          { icon: <SaveIcon />,    label: 'Guardar en biblioteca', onClick: onSaveToLibrary },
+          'sep',
+          { icon: <StarIcon filled={song.is_favorite} />, label: song.is_favorite ? 'Quitar de favoritos' : 'Marcar favorito', onClick: onToggleFav },
+          'sep',
+          { icon: <UpIcon />,   label: 'Subir', onClick: onMoveUp, disabled: index <= 0 },
+          { icon: <DownIcon />, label: 'Bajar', onClick: onMoveDown, disabled: index >= total - 1 },
+          'sep',
+          { icon: <TrashIcon />, label: 'Eliminar', onClick: onDelete, danger: true },
+        ]}
+        onClose={() => setCtx(null)}
+      />
     </>
   )
 }
@@ -1124,17 +984,25 @@ export function SongsPage() {
   }, [load])
 
   const selectSong = useCallback(async (song) => {
-    if (activeSong?.id === song.id) return
+    if (activeSong?.id === song.id) return activeSong
     const full = await ipc.songs.findById(song.id)
     setActiveSong(full)
+    return full
   }, [activeSong])
 
-  // ── Deep-link del buscador global ──────────────────────────────────────────
+  // ── Deep-link del buscador global: seleccionar y proyectar la primera sección ──
   useEffect(() => {
     if (pendingSelection?.type !== 'song') return
     setView('list')
-    selectSong({ id: pendingSelection.payload.songId })
-    clearPendingSelection()
+    ;(async () => {
+      const full = await selectSong({ id: pendingSelection.payload.songId })
+      const first = full && buildAllSections(full)[0]
+      if (first) {
+        const meta = first._isTitleSlide && first._meta ? `\n\n— ${first._meta}` : ''
+        project(`${first.lyrics}${meta}`)
+      }
+      clearPendingSelection()
+    })()
   }, [pendingSelection]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSave = useCallback(async (data) => {
@@ -1236,6 +1104,7 @@ export function SongsPage() {
         title: song.title,
         content: `${song.title}${song.artist ? `\n${song.artist}` : ''}`,
         type: 'song',
+        ref: { songId: song.id },
       })
       refreshLibrary()
     } catch (e) {
@@ -1276,8 +1145,7 @@ export function SongsPage() {
       {/* Panel izquierdo */}
       <div className={cn(
         'flex-shrink-0 flex flex-col border-r overflow-hidden transition-all duration-200',
-        'border-surface-muted dark:border-dark-border',
-        'bg-white dark:bg-dark-surface',
+        'border-line-1 bg-surface-1',
         sidebarCollapsed ? 'w-9' : 'w-72',
       )}>
         {sidebarCollapsed ? (
@@ -1285,16 +1153,16 @@ export function SongsPage() {
             <button
               onClick={() => setSidebarCollapsed(false)}
               title="Mostrar buscador de canciones"
-              className="p-1.5 text-slate-400 hover:text-brand-500 rounded-lg hover:bg-surface-soft dark:hover:bg-dark-card transition-colors"
+              className="p-1.5 text-ink-4 hover:text-primary-500 rounded-btn hover:bg-surface-3 transition-colors"
             >
               <ChevronRightIcon />
             </button>
           </div>
         ) : (
         <>
-        <div className="p-3 border-b border-surface-muted dark:border-dark-border">
+        <div className="p-3 border-b border-line-1">
           <div className="flex items-center justify-between mb-3">
-            <SectionLabel>Canciones ({songs.length})</SectionLabel>
+            <FieldLabel>Canciones ({songs.length})</FieldLabel>
             <div className="flex gap-1.5">
               <Button size="sm" variant="secondary" onClick={() => setView('importPptx')} title="Importar letras desde un archivo PowerPoint">
                 <UploadIcon /> PPTX
@@ -1307,7 +1175,7 @@ export function SongsPage() {
 
           <div className="relative mb-2">
             <svg
-              className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400"
+              className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-ink-4"
               width="12"
               height="12"
               fill="none"
@@ -1340,10 +1208,10 @@ export function SongsPage() {
           <button
             onClick={() => setShowFavs(f => !f)}
             className={cn(
-              'w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] font-semibold border transition-all',
+              'w-full flex items-center gap-2 px-3 py-1.5 rounded-btn text-[12px] font-semibold border transition-all',
               showFavs
-                ? 'bg-amber-50 dark:bg-amber-950/30 text-amber-500 border-amber-200 dark:border-amber-900'
-                : 'border-surface-muted dark:border-dark-border text-slate-400 hover:text-slate-600',
+                ? 'bg-warn-500/10 text-warn-500 border-warn-500/40'
+                : 'border-line-1 text-ink-4 hover:text-ink-2',
             )}
           >
             <StarIcon filled={showFavs} />
@@ -1358,16 +1226,16 @@ export function SongsPage() {
             </div>
           ) : songs.length === 0 ? (
             <div className="text-center py-10">
-              <div className="w-10 h-10 rounded-xl bg-surface-soft dark:bg-dark-card flex items-center justify-center mx-auto mb-3">
+              <div className="w-10 h-10 rounded-panel bg-surface-3 text-ink-3 flex items-center justify-center mx-auto mb-3">
                 <MusicIcon />
               </div>
-              <p className="text-[13px] text-slate-400">
+              <p className="text-[13px] text-ink-4">
                 {search ? 'Sin resultados' : 'No hay canciones aún'}
               </p>
               {!search && (
                 <button
                   onClick={() => { setEditSong(null); setView('edit') }}
-                  className="text-[12px] text-brand-500 hover:text-brand-600 mt-1.5"
+                  className="text-[12px] text-primary-500 hover:text-primary-400 mt-1.5"
                 >
                   + Crear primera canción
                 </button>
@@ -1426,8 +1294,8 @@ export function SongsPage() {
             onProjectSection={(section) => project(section.lyrics)}
           />
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center gap-3 text-slate-400">
-            <div className="w-14 h-14 rounded-2xl bg-surface-soft dark:bg-dark-card flex items-center justify-center">
+          <div className="flex-1 flex flex-col items-center justify-center gap-3 text-ink-4">
+            <div className="w-14 h-14 rounded-card bg-surface-3 flex items-center justify-center">
               <MusicIcon />
             </div>
             <p className="text-sm">Selecciona una canción</p>

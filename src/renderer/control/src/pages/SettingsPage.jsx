@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useApp } from '../context/AppContext.jsx'
-import { Button, Card, Input, Select, SectionLabel } from '@shared/components/ui/index.jsx'
+import { Button, Card, Select, FieldLabel, Toggle, SegmentedControl, Slider } from '@shared/components/ui/index.jsx'
 import { ConfirmModal } from '@shared/components/ConfirmModal.jsx'
 import { buildFontFamily, calcAutoFontSize } from '@shared/utils/font.js'
 import { WATERMARK_MARGIN_MAP, WATERMARK_OPACITY_MAP } from '@shared/constants/watermark.js'
@@ -94,9 +94,9 @@ const FolderIcon = () => (
 function SettingSection({ icon, title, children }) {
   return (
     <Card className="p-5">
-      <div className="flex items-center gap-2.5 mb-4 pb-3 border-b border-surface-muted dark:border-dark-border">
-        <div className="text-brand-500 dark:text-brand-400">{icon}</div>
-        <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">{title}</h3>
+      <div className="flex items-center gap-2.5 mb-4 pb-3 border-b border-line-1">
+        <div className="w-7 h-7 rounded-panel bg-primary-500/10 text-primary-500 flex items-center justify-center flex-shrink-0">{icon}</div>
+        <h3 className="text-[11px] font-mono font-semibold uppercase tracking-[1.5px] text-ink-2">{title}</h3>
       </div>
       <div className="space-y-4">
         {children}
@@ -110,11 +110,11 @@ function SettingItem({ label, description, children }) {
   return (
     <div className="flex items-start justify-between gap-4">
       <div className="flex-1">
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">
+        <label className="block text-sm font-medium text-ink-1">
           {label}
         </label>
         {description && (
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+          <p className="text-xs text-ink-3 mt-0.5">
             {description}
           </p>
         )}
@@ -153,8 +153,8 @@ function ProjectionAppearanceSetting({ fontFamily, fonts, fontSize, currentBackg
       {/* Fuente */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Fuente de proyección</label>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Tipografía del texto proyectado (fuentes instaladas en este equipo)</p>
+          <label className="block text-sm font-medium text-ink-1">Fuente de proyección</label>
+          <p className="text-xs text-ink-3 mt-0.5">Tipografía del texto proyectado (fuentes instaladas en este equipo)</p>
         </div>
         <Select value={draftFont} onChange={(e) => setDraftFont(e.target.value)} className="w-48 flex-shrink-0">
           {!fonts.includes(draftFont) && (
@@ -169,29 +169,29 @@ function ProjectionAppearanceSetting({ fontFamily, fonts, fontSize, currentBackg
       {/* Tamaño de fuente — 100% personalizado en px, o automático según el texto */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Tamaño de fuente</label>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Define un tamaño exacto en píxeles, o deja que se ajuste solo según el texto</p>
+          <label className="block text-sm font-medium text-ink-1">Tamaño de fuente</label>
+          <p className="text-xs text-ink-3 mt-0.5">Define un tamaño exacto en píxeles, o deja que se ajuste solo según el texto</p>
         </div>
-        <label className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 flex-shrink-0 cursor-pointer select-none">
-          <input type="checkbox" checked={draftAuto} onChange={(e) => setDraftAuto(e.target.checked)} className="accent-brand-500" />
+        <label className="flex items-center gap-1.5 text-xs font-semibold text-ink-3 flex-shrink-0 cursor-pointer select-none">
+          <input type="checkbox" checked={draftAuto} onChange={(e) => setDraftAuto(e.target.checked)} className="accent-primary-500" />
           Automático
         </label>
       </div>
 
       {!draftAuto && (
         <div className="flex items-center gap-3 -mt-1">
-          <input
-            type="range" min="16" max="200" value={draftSize}
+          <Slider
+            min={16} max={200} value={draftSize}
             onChange={(e) => setDraftSize(+e.target.value)}
-            className="flex-1 accent-brand-500"
+            className="flex-1"
           />
           <div className="flex items-center gap-1 flex-shrink-0">
             <input
               type="number" min="8" max="400" value={draftSize}
               onChange={(e) => setDraftSize(Math.max(8, Math.min(400, +e.target.value || 8)))}
-              className="w-16 px-2 py-1 text-sm rounded-lg bg-surface-soft dark:bg-dark-card border border-surface-muted dark:border-dark-border text-slate-900 dark:text-slate-100 outline-none focus:border-brand-500"
+              className="w-16 px-2 py-1 text-sm font-mono rounded-btn bg-surface-0 border border-line-1 text-ink-1 outline-none focus:border-primary-500"
             />
-            <span className="text-xs text-slate-400">px</span>
+            <span className="text-xs text-ink-4">px</span>
           </div>
         </div>
       )}
@@ -199,15 +199,15 @@ function ProjectionAppearanceSetting({ fontFamily, fonts, fontSize, currentBackg
       {/* Fondo predeterminado — solo informativo; se cambia desde el botón «Fondo» de la barra superior */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Fondo predeterminado</label>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Se cambia desde el botón «Fondo» en la barra superior del panel de control</p>
+          <label className="block text-sm font-medium text-ink-1">Fondo predeterminado</label>
+          <p className="text-xs text-ink-3 mt-0.5">Se cambia desde el botón «Fondo» en la barra superior del panel de control</p>
         </div>
-        <span className="text-[13px] font-semibold text-brand-500 flex-shrink-0">{currentBackgroundName}</span>
+        <span className="text-[13px] font-semibold text-primary-500 flex-shrink-0">{currentBackgroundName}</span>
       </div>
 
       {/* Preview compartida — refleja la fuente y el tamaño elegidos arriba (fondo neutro fijo) */}
       <div>
-        <SectionLabel className="mb-1.5">Así se verá el texto proyectado</SectionLabel>
+        <FieldLabel className="mb-1.5">Así se verá el texto proyectado</FieldLabel>
         <div className="slide-canvas w-full" style={{ maxWidth: PREVIEW_REF_WIDTH }}>
           <div className="absolute inset-0" style={{ background: DEFAULT_BG.value }} />
           <span className="absolute top-2 left-2.5 font-mono text-[9px] text-white/20 tracking-wider select-none">PREVIEW</span>
@@ -229,7 +229,7 @@ function ProjectionAppearanceSetting({ fontFamily, fonts, fontSize, currentBackg
           value={sample}
           onChange={(e) => setSample(e.target.value)}
           placeholder="Escribe un texto de muestra…"
-          className="w-full mt-2 px-3 py-1.5 text-xs rounded-lg bg-surface-soft dark:bg-dark-card border border-surface-muted dark:border-dark-border text-slate-600 dark:text-slate-300 outline-none focus:border-brand-500"
+          className="w-full mt-2 px-3 py-1.5 text-xs rounded-btn bg-surface-0 border border-line-1 text-ink-2 outline-none focus:border-primary-500"
           style={{ maxWidth: PREVIEW_REF_WIDTH }}
         />
       </div>
@@ -257,7 +257,7 @@ const CORNERS = [
 
 function CornerPicker({ value, onChange }) {
   return (
-    <div className="relative w-16 h-11 rounded-md border border-surface-muted dark:border-dark-border bg-slate-100 dark:bg-slate-800 flex-shrink-0">
+    <div className="relative w-16 h-11 rounded-btn border border-line-1 bg-surface-0 flex-shrink-0">
       {CORNERS.map(c => (
         <button
           key={c.key}
@@ -268,8 +268,8 @@ function CornerPicker({ value, onChange }) {
             'absolute w-3 h-3 rounded-sm transition-colors',
             c.pos,
             value === c.key
-              ? 'bg-brand-500'
-              : 'bg-slate-300 dark:bg-slate-600 hover:bg-brand-300 dark:hover:bg-brand-700',
+              ? 'bg-primary-500'
+              : 'bg-surface-3 border border-line-2 hover:bg-primary-500/40',
           )}
         />
       ))}
@@ -309,16 +309,16 @@ function WatermarkSetting({ watermark, onChange }) {
 
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Logo</label>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">PNG, JPG, WEBP, GIF o SVG — máx. 5 MB</p>
-          {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+          <label className="block text-sm font-medium text-ink-1">Logo</label>
+          <p className="text-xs text-ink-3 mt-0.5">PNG, JPG, WEBP, GIF o SVG — máx. 5 MB</p>
+          {error && <p className="text-xs text-live-500 mt-1">{error}</p>}
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
           {watermark.image && (
             <img
               src={watermark.image}
               alt=""
-              className="w-9 h-9 rounded-md object-contain border border-surface-muted dark:border-dark-border bg-slate-900"
+              className="w-9 h-9 rounded-btn object-contain border border-line-1 bg-neutral-950"
             />
           )}
           <Button variant="secondary" size="sm" onClick={handlePick} disabled={busy}>
@@ -329,8 +329,8 @@ function WatermarkSetting({ watermark, onChange }) {
 
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-200">Posición</label>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Esquina donde aparece el logo</p>
+          <label className="block text-sm font-medium text-ink-1">Posición</label>
+          <p className="text-xs text-ink-3 mt-0.5">Esquina donde aparece el logo</p>
         </div>
         <CornerPicker value={watermark.position} onChange={(position) => onChange({ position })} />
       </div>
@@ -383,32 +383,69 @@ function WatermarkSetting({ watermark, onChange }) {
   )
 }
 
-// ─── Toggle Switch ────────────────────────────────────────────────────────────
-function Toggle({ checked, onChange, disabled = false }) {
+// ─── Selector espacial de monitor ─────────────────────────────────────────────
+// Mini-canvas con rectángulos proporcionales a la geometría real de los
+// monitores conectados (bounds de Electron). Clic para elegir dónde proyectar.
+const MONITOR_PREF_LABELS = { primary: 'Principal', secondary: 'Secundaria', third: 'Tercera' }
+
+function MonitorPicker({ displays, value, onChange }) {
+  if (!displays || displays.length === 0) {
+    return <p className="text-xs text-ink-4">Detectando monitores…</p>
+  }
+
+  // Misma resolución de preferencia que WindowManager: primary = pantalla
+  // principal; secondary/third = 1ª y 2ª no-principales en orden.
+  const nonPrimary = displays.filter(d => !d.isPrimary)
+  const prefOf = (d) => {
+    if (d.isPrimary) return 'primary'
+    return nonPrimary.indexOf(d) === 0 ? 'secondary' : 'third'
+  }
+
+  const minX = Math.min(...displays.map(d => d.bounds.x))
+  const minY = Math.min(...displays.map(d => d.bounds.y))
+  const maxX = Math.max(...displays.map(d => d.bounds.x + d.bounds.width))
+  const maxY = Math.max(...displays.map(d => d.bounds.y + d.bounds.height))
+  const scale = Math.min(320 / (maxX - minX), 140 / (maxY - minY))
+  const PAD = 12
+
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      disabled={disabled}
-      onClick={() => onChange(!checked)}
-      className={cn(
-        'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
-        'focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2',
-        'dark:focus:ring-offset-dark-bg',
-        checked
-          ? 'bg-brand-500'
-          : 'bg-slate-200 dark:bg-slate-700',
-        disabled && 'opacity-50 cursor-not-allowed'
-      )}
+    <div
+      className="relative rounded-panel border border-line-1 bg-surface-0"
+      style={{ width: (maxX - minX) * scale + PAD * 2, height: (maxY - minY) * scale + PAD * 2 }}
     >
-      <span
-        className={cn(
-          'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
-          checked ? 'translate-x-6' : 'translate-x-1'
-        )}
-      />
-    </button>
+      {displays.map(d => {
+        const pref = prefOf(d)
+        const active = pref === value
+        return (
+          <button
+            key={d.id}
+            type="button"
+            onClick={() => onChange(pref)}
+            title={`Monitor ${d.id} — ${d.bounds.width}×${d.bounds.height}`}
+            className={cn(
+              'absolute rounded-[3px] border-2 flex flex-col items-center justify-center gap-0.5 transition-all overflow-hidden',
+              active
+                ? 'border-primary-500 bg-primary-500/15 text-primary-500'
+                : 'border-line-2 bg-surface-3 text-ink-3 hover:border-primary-500/50',
+            )}
+            style={{
+              left:   (d.bounds.x - minX) * scale + PAD,
+              top:    (d.bounds.y - minY) * scale + PAD,
+              width:  d.bounds.width * scale,
+              height: d.bounds.height * scale,
+            }}
+          >
+            {d.isPrimary && (
+              <span className="absolute top-1 left-1/2 -translate-x-1/2 text-[7px] font-mono font-bold uppercase tracking-[0.5px] px-1 py-px rounded-[2px] bg-primary-500 text-white">
+                Primary
+              </span>
+            )}
+            <span className="font-mono text-[10px] font-bold leading-none">{d.bounds.width}×{d.bounds.height}</span>
+            <span className="font-mono text-[8px] uppercase tracking-[0.5px] opacity-80">{MONITOR_PREF_LABELS[pref]}</span>
+          </button>
+        )
+      })}
+    </div>
   )
 }
 
@@ -445,10 +482,10 @@ function KeyCapture({ value, defaultValue, onChange }) {
       <button
         onClick={() => setCapturing(true)}
         className={cn(
-          'min-w-[100px] px-3 py-1.5 rounded-lg border text-sm font-mono font-bold transition-all text-center',
+          'min-w-[100px] px-3 py-1.5 rounded-btn border text-sm font-mono font-bold transition-all text-center',
           capturing
-            ? 'border-brand-500 bg-brand-50 dark:bg-brand-950/30 text-brand-500 dark:text-brand-400 animate-pulse'
-            : 'border-surface-muted dark:border-dark-border bg-white dark:bg-dark-surface text-slate-700 dark:text-slate-200 hover:border-brand-400 dark:hover:border-brand-700 cursor-pointer',
+            ? 'border-primary-500 bg-primary-500/10 text-primary-500 animate-pulse'
+            : 'border-line-2 bg-surface-0 text-ink-1 hover:border-primary-500/60 cursor-pointer',
         )}
       >
         {capturing ? 'Presiona…' : (KEY_NAMES[value] || value)}
@@ -457,7 +494,7 @@ function KeyCapture({ value, defaultValue, onChange }) {
         <button
           onClick={() => onChange(defaultValue)}
           title="Restablecer"
-          className="text-[13px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+          className="text-[13px] text-ink-4 hover:text-ink-2 transition-colors"
         >
           ↺
         </button>
@@ -582,28 +619,28 @@ export function SettingsPage() {
         
         {/* Título */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50">
+          <h1 className="text-2xl font-bold text-ink-1">
             Ajustes
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-sm text-ink-3 mt-1">
             Configura Open Screen según tus preferencias
           </p>
         </div>
 
         {/* Apariencia */}
         <SettingSection icon={<PaletteIcon />} title="Apariencia">
-          <SettingItem 
-            label="Tema" 
+          <SettingItem
+            label="Tema"
             description="Elige entre tema claro u oscuro"
           >
-            <Select
+            <SegmentedControl
+              options={[
+                { value: 'dark',  label: 'Oscuro' },
+                { value: 'light', label: 'Claro' },
+              ]}
               value={theme}
-              onChange={(e) => setTheme(e.target.value)}
-              className="w-36"
-            >
-              <option value="light">Claro</option>
-              <option value="dark">Oscuro</option>
-            </Select>
+              onChange={setTheme}
+            />
           </SettingItem>
 
           <SettingItem
@@ -625,15 +662,15 @@ export function SettingsPage() {
             label="Velocidad de animaciones"
             description="Controla la velocidad de las transiciones en la interfaz"
           >
-            <Select
+            <SegmentedControl
+              options={[
+                { value: 'slow',   label: 'Lenta' },
+                { value: 'normal', label: 'Normal' },
+                { value: 'fast',   label: 'Rápida' },
+              ]}
               value={animationSpeed}
-              onChange={(e) => setAnimationSpeed(e.target.value)}
-              className="w-36"
-            >
-              <option value="slow">Lenta</option>
-              <option value="normal">Normal</option>
-              <option value="fast">Rápida</option>
-            </Select>
+              onChange={setAnimationSpeed}
+            />
           </SettingItem>
         </SettingSection>
 
@@ -643,14 +680,14 @@ export function SettingsPage() {
             label="Proyectar al hacer clic"
             description="Un clic proyecta de inmediato; doble clic lo confirma primero"
           >
-            <Select
+            <SegmentedControl
+              options={[
+                { value: 'double', label: 'Doble clic' },
+                { value: 'single', label: 'Un clic' },
+              ]}
               value={projectionClickMode}
-              onChange={(e) => setProjClickMode(e.target.value)}
-              className="w-44"
-            >
-              <option value="double">Doble clic</option>
-              <option value="single">Un solo clic</option>
-            </Select>
+              onChange={setProjClickMode}
+            />
           </SettingItem>
 
           <SettingItem
@@ -677,20 +714,15 @@ export function SettingsPage() {
 
         {/* Proyección */}
         <SettingSection icon={<MonitorIcon />} title="Proyección">
-          <SettingItem
-            label="Monitor activo"
-            description="Selecciona en qué pantalla proyectar"
-          >
-            <Select
-              value={activeMonitor}
-              onChange={(e) => setActiveMonitor(e.target.value)}
-              className="w-44"
-            >
-              <option value="primary">Principal</option>
-              <option value="secondary">Secundaria</option>
-              {displays.length > 2 && <option value="third">Tercera</option>}
-            </Select>
-          </SettingItem>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-ink-1">Monitor activo</label>
+              <p className="text-xs text-ink-3 mt-0.5">
+                Haz clic en la pantalla donde quieres proyectar — la disposición refleja la geometría real de tus monitores
+              </p>
+            </div>
+            <MonitorPicker displays={displays} value={activeMonitor} onChange={setActiveMonitor} />
+          </div>
 
           <SettingItem
             label="Ocultar controles automáticamente"
@@ -817,7 +849,7 @@ export function SettingsPage() {
               {backupMsg && (
                 <p className={cn(
                   'text-[11px] max-w-[220px] text-right',
-                  backupMsg.type === 'error' ? 'text-red-500' : 'text-emerald-600 dark:text-emerald-400',
+                  backupMsg.type === 'error' ? 'text-live-500' : 'text-emerald-500',
                 )}>
                   {backupMsg.text}
                 </p>
@@ -871,15 +903,15 @@ export function SettingsPage() {
         <SettingSection icon={<InfoIcon />} title="Acerca de">
           <div className="space-y-3 text-sm">
             <div className="flex justify-between">
-              <span className="text-slate-600 dark:text-slate-400">Versión</span>
-              <span className="font-mono text-slate-900 dark:text-slate-100">{appVersion ?? '—'}</span>
+              <span className="text-ink-2">Versión</span>
+              <span className="font-mono text-ink-1">{appVersion ?? '—'}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-600 dark:text-slate-400">Licencia</span>
-              <span className="font-mono text-slate-900 dark:text-slate-100">MIT</span>
+              <span className="text-ink-2">Licencia</span>
+              <span className="font-mono text-ink-1">MIT</span>
             </div>
-            <div className="pt-3 border-t border-surface-muted dark:border-dark-border">
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+            <div className="pt-3 border-t border-line-1">
+              <p className="text-xs text-ink-3">
                 Open Screen — Software de proyección para iglesias y eventos.
                 Desarrollado con ❤️ por la comunidad.
               </p>

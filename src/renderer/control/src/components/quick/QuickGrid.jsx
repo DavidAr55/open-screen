@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useApp } from '../../context/AppContext.jsx'
-import { SectionLabel } from '@shared/components/ui/index.jsx'
+import { FieldLabel } from '@shared/components/ui/index.jsx'
 import { cn } from '@shared/utils/cn.js'
 
 export function QuickGrid() {
@@ -29,18 +29,18 @@ export function QuickGrid() {
 
   return (
     <div className="animate-fade-up-3">
-      <SectionLabel className="mb-2">Acceso rápido</SectionLabel>
+      <FieldLabel className="mb-2">Acceso rápido</FieldLabel>
       <div className="grid grid-cols-3 gap-2">
         {items.map(item => (
           <button
             key={item.id}
-            className={cn('quick-card', selectedId === item.id && 'ring-2 ring-brand-500')}
+            className={cn('quick-card', selectedId === item.id && 'ring-2 ring-primary-500/60 border-primary-500/50')}
             onClick={() => handleClick(item)}
           >
-            <p className="text-[12px] font-bold text-slate-800 dark:text-slate-200 truncate mb-0.5">
+            <p className="text-[12px] font-bold text-ink-1 truncate mb-0.5">
               {item.title}
             </p>
-            <p className="text-[11px] text-slate-400 dark:text-slate-600 truncate">
+            <p className="text-[11px] text-ink-4 truncate">
               {item.content.split('\n')[0].substring(0, 36)}
             </p>
           </button>

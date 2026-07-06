@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useApp } from '../context/AppContext.jsx'
-import { Button, Card, Input, Select, SectionLabel, Spinner } from '@shared/components/ui/index.jsx'
-import { DEFAULT_BG } from '@shared/constants/defaultBackground.js'
+import { Button, Card, Input, Select, FieldLabel, Spinner, SegmentedControl } from '@shared/components/ui/index.jsx'
+import { ContextMenu } from '@shared/components/ContextMenu.jsx'
+import { SlideCanvas } from '@shared/components/SlideCanvas.jsx'
 import { watermarkPreviewStyle } from '@shared/constants/watermark.js'
-import { buildFontFamily } from '@shared/utils/font.js'
 import { cn } from '@shared/utils/cn.js'
 
 // ─── Iconos ───────────────────────────────────────────────────────────────────
@@ -19,86 +19,6 @@ const MODES = [
   { id: 'search',   label: 'Buscar'  },
 ]
 
-// ─── Context Menu ─────────────────────────────────────────────────────────────
-function ContextMenu({ x, y, verse, onProject, onSave, onCopy, onClose }) {
-  const menuRef = useRef(null)
-
-  // Cerrar al hacer clic fuera
-  useEffect(() => {
-    const handler = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) onClose()
-    }
-    // Pequeño delay para no cerrar inmediatamente por el mismo clic derecho
-    const timer = setTimeout(() => document.addEventListener('mousedown', handler), 50)
-    return () => { clearTimeout(timer); document.removeEventListener('mousedown', handler) }
-  }, [onClose])
-
-  // Ajustar posición para que no se salga de la pantalla
-  const style = {
-    position: 'fixed',
-    top:  Math.min(y, window.innerHeight - 180),
-    left: Math.min(x, window.innerWidth  - 220),
-    zIndex: 9999,
-  }
-
-  const ITEMS = [
-    {
-      label: 'Proyectar',
-      icon:  <ProjectIcon />,
-      color: 'text-brand-600 dark:text-brand-400',
-      action: onProject,
-    },
-    {
-      label: 'Guardar en biblioteca',
-      icon:  <SaveIcon />,
-      action: onSave,
-    },
-    {
-      label: 'Copiar texto',
-      icon:  <CopyIcon />,
-      action: onCopy,
-    },
-  ]
-
-  return (
-    <div
-      ref={menuRef}
-      style={style}
-      className={cn(
-        'w-52 py-1 rounded-xl shadow-card-md',
-        'bg-white dark:bg-dark-surface',
-        'border border-surface-muted dark:border-dark-border',
-      )}
-    >
-      {/* Referencia del versículo */}
-      <div className="px-3 py-2 border-b border-surface-muted dark:border-dark-border">
-        <p className="font-mono text-[10px] font-bold text-brand-500">{verse.reference}</p>
-        <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">{verse.text.substring(0, 50)}…</p>
-      </div>
-
-      {/* Opciones */}
-      <div className="py-1">
-        {ITEMS.map((item) => (
-          <button
-            key={item.label}
-            onClick={() => { item.action(); onClose() }}
-            className={cn(
-              'w-full flex items-center gap-2.5 px-3 py-2 text-[13px] font-medium',
-              'text-slate-700 dark:text-slate-300',
-              'hover:bg-surface-soft dark:hover:bg-dark-card',
-              'transition-colors text-left',
-              item.color,
-            )}
-          >
-            <span className="opacity-60">{item.icon}</span>
-            {item.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 // ─── Resaltador de texto ──────────────────────────────────────────────────────
 function Highlight({ text, query }) {
   if (!query || !query.trim()) return <>{text}</>
@@ -110,7 +30,7 @@ function Highlight({ text, query }) {
     <>
       {parts.map((part, i) =>
         part.toLowerCase() === query.trim().toLowerCase() ? (
-          <mark key={i} className="bg-amber-300/70 dark:bg-amber-500/40 text-inherit rounded px-0.5 -mx-0.5 font-bold">
+          <mark key={i} className="bg-warn-500/30 text-inherit rounded-[2px] px-0.5 -mx-0.5 font-bold">
             {part}
           </mark>
         ) : (
@@ -122,7 +42,7 @@ function Highlight({ text, query }) {
 }
 
 // ─── Componente de versículo con todos los eventos ────────────────────────────
-function VerseItem({ verse, isSelected, onSelect, onProject, onSave, searchQuery }) {
+function VerseItem({ verse, isSelected, isLiveVerse, onSelect, onProject, onSave, searchQuery }) {
   const { projectionClickMode } = useApp()
   const clickTimer  = useRef(null)
   const [ctx, setCtx] = useState(null)
@@ -161,35 +81,39 @@ function VerseItem({ verse, isSelected, onSelect, onProject, onSave, searchQuery
         onClick={handleClick}
         onContextMenu={handleContextMenu}
         className={cn(
-          'px-2.5 py-2 rounded-lg cursor-pointer transition-all select-none',
+          'px-2.5 py-2 rounded-btn cursor-pointer transition-all select-none',
           isSelected
-            ? 'bg-brand-50 dark:bg-brand-950/30 border border-brand-200 dark:border-brand-900'
-            : 'hover:bg-surface-soft dark:hover:bg-dark-card border border-transparent',
+            ? 'bg-primary-500/10 border border-primary-500/40'
+            : 'hover:bg-surface-3 border border-transparent',
         )}
         title="Clic para seleccionar • Doble clic para proyectar • Clic derecho para más opciones"
       >
+        {isLiveVerse && (
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-live-500 animate-blink mr-1.5 align-middle" title="En vivo" />
+        )}
         <span className={cn(
           'font-mono text-[10px] font-bold mr-1.5',
-          isSelected ? 'text-brand-500' : 'text-slate-400 dark:text-slate-600',
+          isSelected ? 'text-primary-500' : 'text-ink-4',
         )}>
           {verse.verse}
         </span>
-        <span className="text-[12px] leading-relaxed text-slate-700 dark:text-slate-300">
+        <span className="text-[12px] leading-relaxed text-ink-2">
           <Highlight text={verse.text} query={searchQuery} />
         </span>
       </div>
 
-      {ctx && (
-        <ContextMenu
-          x={ctx.x}
-          y={ctx.y}
-          verse={verse}
-          onProject={() => onProject(verse)}
-          onSave={() => onSave(verse)}
-          onCopy={handleCopy}
-          onClose={() => setCtx(null)}
-        />
-      )}
+      <ContextMenu
+        open={!!ctx}
+        x={ctx?.x ?? 0}
+        y={ctx?.y ?? 0}
+        title={verse.reference}
+        items={[
+          { icon: <ProjectIcon />, label: 'Proyectar', onClick: () => onProject(verse) },
+          { icon: <SaveIcon />,    label: 'Guardar en biblioteca', onClick: () => onSave(verse) },
+          { icon: <CopyIcon />,    label: 'Copiar texto', onClick: handleCopy },
+        ]}
+        onClose={() => setCtx(null)}
+      />
     </>
   )
 }
@@ -198,7 +122,8 @@ function VerseItem({ verse, isSelected, onSelect, onProject, onSave, searchQuery
 export function ScripturePage() {
   const { project, activeBg, createItem, refreshLibrary, isNavNext, isNavPrev,
           defaultBibleModule, showVerseNumbers, setNextText,
-          pendingSelection, clearPendingSelection } = useApp()
+          pendingSelection, clearPendingSelection,
+          registerTransport, clearSignal, isLive } = useApp()
 
   const [mode,     setMode]     = useState('navigate')
   const [modules,  setModules]  = useState([])
@@ -223,6 +148,9 @@ export function ScripturePage() {
   // Feedback de guardado
   const [saveMsg, setSaveMsg] = useState(null) // 'ok' | 'error' | null
   const saveMsgTimer = useRef(null)
+
+  // Versículo actualmente proyectado — para el punto rojo ● en la lista
+  const [liveVerseId, setLiveVerseId] = useState(null)
 
   // Deep-link del buscador global: objetivo pendiente {bookId, chapter, verse}.
   // "Cabalga" la cadena de effects existente (módulo → libros → capítulo → versos)
@@ -260,8 +188,9 @@ export function ScripturePage() {
       if (!book) { deepLinkRef.current = null; clearPendingSelection(); return }
       if (book.id === selectedBook?.id && chapter === selectedChapter) {
         // Ya estamos en ese capítulo (la cadena no se re-dispara):
-        // seleccionar el versículo sobre los versos ya cargados
-        if (verse != null) setSelectedVerse(verses.find(v => v.verse === verse) ?? verses[0] ?? null)
+        // proyectar y seleccionar el versículo sobre los versos ya cargados
+        const v = verse != null ? (verses.find(x => x.verse === verse) ?? verses[0] ?? null) : (verses[0] ?? null)
+        if (v) projectVerse(v)
         deepLinkRef.current = null
         clearPendingSelection()
       } else {
@@ -295,14 +224,16 @@ export function ScripturePage() {
     if (!moduleId || !selectedBook) return
     window.api?.bible.getChapter(moduleId, selectedBook.id, selectedChapter).then(vs => {
       setVerses(vs ?? [])
-      // Último eslabón del deep-link: seleccionar el versículo objetivo y limpiar
+      // Último eslabón del deep-link: proyectar y seleccionar el versículo objetivo, y limpiar
       const target = deepLinkRef.current
-      if (target?.verse != null) {
-        setSelectedVerse(vs?.find(x => x.verse === target.verse) ?? vs?.[0] ?? null)
+      if (target) {
+        const v = target.verse != null ? (vs?.find(x => x.verse === target.verse) ?? vs?.[0] ?? null) : (vs?.[0] ?? null)
+        if (v) projectVerse(v)
+        deepLinkRef.current = null
+        clearPendingSelection()
       } else {
         setSelectedVerse(vs?.[0] ?? null)
       }
-      if (target) { deepLinkRef.current = null; clearPendingSelection() }
     })
   }, [moduleId, selectedBook, selectedChapter]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -327,7 +258,12 @@ export function ScripturePage() {
     const text = `${body}\n\n— ${verse.reference}`
     project(text)
     setSelectedVerse(verse)
+    setLiveVerseId(verse.id)
   }, [project, showVerseNumbers])
+
+  // La señal de limpieza global y el apagado quitan el punto rojo
+  useEffect(() => { setLiveVerseId(null) }, [clearSignal])
+  useEffect(() => { if (!isLive) setLiveVerseId(null) }, [isLive])
 
   // ── Guardar en biblioteca ──────────────────────────────────────────────────
   const saveVerse = useCallback(async (verse) => {
@@ -336,6 +272,7 @@ export function ScripturePage() {
         title:   verse.reference,
         content: `${verse.text}\n\n— ${verse.reference}`,
         type:    'verse',
+        ref:     { moduleId, bookId: verse.book, chapter: verse.chapter, verse: verse.verse },
       })
       await refreshLibrary()
       setSaveMsg('ok')
@@ -345,7 +282,7 @@ export function ScripturePage() {
       clearTimeout(saveMsgTimer.current)
       saveMsgTimer.current = setTimeout(() => setSaveMsg(null), 2500)
     }
-  }, [refreshLibrary])
+  }, [refreshLibrary, moduleId])
 
   // ── Actualiza la vista previa de "lo próximo" para el panel de Escenario ───
   useEffect(() => {
@@ -363,11 +300,13 @@ export function ScripturePage() {
   }, [projectVerse])
 
   const goPrev = useCallback(() => {
+    if (!selectedVerse) return
     const prev = verses.find(v => v.verse === selectedVerse.verse - 1)
     if (prev) goToVerse(prev)
   }, [verses, selectedVerse, goToVerse])
 
   const goNext = useCallback(() => {
+    if (!selectedVerse) return
     const next = verses.find(v => v.verse === selectedVerse.verse + 1)
     if (next) goToVerse(next)
   }, [verses, selectedVerse, goToVerse])
@@ -386,6 +325,16 @@ export function ScripturePage() {
     const next = searchResults[Math.min(searchResults.length - 1, idx + 1)]
     if (next) goToVerse(next)
   }, [searchResults, selectedVerse, goToVerse])
+
+  // ── Transport global (barra inferior): prev/next de versículos ─────────────
+  useEffect(() => {
+    if (!selectedVerse) return
+    return registerTransport({
+      onPrev: mode === 'navigate' ? goPrev : goSearchPrev,
+      onNext: mode === 'navigate' ? goNext : goSearchNext,
+      label:  selectedVerse.reference,
+    })
+  }, [mode, selectedVerse, goPrev, goNext, goSearchPrev, goSearchNext, registerTransport])
 
   // ── Atajos de teclado ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -427,11 +376,11 @@ export function ScripturePage() {
     return (
       <main className="flex-1 flex items-center justify-center p-8">
         <div className="text-center max-w-sm">
-          <div className="w-14 h-14 rounded-2xl bg-brand-50 dark:bg-brand-950/30 flex items-center justify-center mx-auto mb-4">
+          <div className="w-14 h-14 rounded-card bg-primary-500/10 text-primary-500 flex items-center justify-center mx-auto mb-4">
             <BookIcon />
           </div>
-          <h2 className="font-bold text-lg mb-2" style={{ color: 'var(--text-1)' }}>No hay módulos instalados</h2>
-          <p className="text-sm text-slate-400 mb-5">Instala un módulo bíblico (.osb) copiándolo al directorio de bibles.</p>
+          <h2 className="font-bold text-lg mb-2 text-ink-1">No hay módulos instalados</h2>
+          <p className="text-sm text-ink-3 mb-5">Instala un módulo bíblico (.osb) copiándolo al directorio de bibles.</p>
           <Button variant="secondary" onClick={() => window.api?.bible.openBiblesDir()}>
             <FolderIcon /> Abrir directorio de biblias
           </Button>
@@ -450,40 +399,33 @@ export function ScripturePage() {
 
       {/* ── Panel izquierdo ────────────────────────────────────────────────── */}
       <div className={cn(
-        'w-72 flex-shrink-0 flex flex-col border-r',
-        'border-surface-muted dark:border-dark-border',
-        'bg-white dark:bg-dark-surface transition-colors duration-300',
+        'w-72 flex-shrink-0 flex flex-col border-r border-line-1',
+        'bg-surface-1 transition-colors duration-300',
       )}>
 
         {/* Header */}
-        <div className="p-3 border-b border-surface-muted dark:border-dark-border">
+        <div className="p-3 border-b border-line-1">
           {modules.length > 0 && (
             <div className="mb-3">
-              <SectionLabel className="mb-1.5">Versión</SectionLabel>
+              <FieldLabel className="mb-1.5">Versión</FieldLabel>
               <Select className="w-full text-[13px]" value={moduleId ?? ''} onChange={e => setModuleId(e.target.value)}>
                 {modules.map(m => <option key={m.id} value={m.id}>{m.abbreviation} — {m.name}</option>)}
               </Select>
             </div>
           )}
-          <div className="flex gap-1 p-1 rounded-lg bg-surface-soft dark:bg-dark-card">
-            {MODES.map(m => (
-              <button key={m.id} onClick={() => setMode(m.id)}
-                className={cn(
-                  'flex-1 py-1.5 rounded-md text-[12px] font-semibold transition-all',
-                  mode === m.id
-                    ? 'bg-white dark:bg-dark-surface text-slate-900 dark:text-white shadow-card'
-                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300',
-                )}
-              >{m.label}</button>
-            ))}
-          </div>
+          <SegmentedControl
+            block
+            options={MODES.map(m => ({ value: m.id, label: m.label }))}
+            value={mode}
+            onChange={setMode}
+          />
         </div>
 
         {/* ── Navegar ──────────────────────────────────────────────────────── */}
         {mode === 'navigate' && (
           <div className="flex flex-col flex-1 overflow-hidden p-3 gap-2">
             <div>
-              <SectionLabel className="mb-1.5">Libro</SectionLabel>
+              <FieldLabel className="mb-1.5">Libro</FieldLabel>
               <Select className="w-full text-[13px]" value={selectedBook?.id ?? ''}
                 onChange={e => {
                   const book = books.find(b => b.id === parseInt(e.target.value))
@@ -500,15 +442,15 @@ export function ScripturePage() {
             </div>
 
             <div>
-              <SectionLabel className="mb-1.5">Capítulo</SectionLabel>
+              <FieldLabel className="mb-1.5">Capítulo</FieldLabel>
               <div className="grid grid-cols-6 gap-1 max-h-36 overflow-y-auto pr-0.5">
                 {chapters.map(ch => (
                   <button key={ch} onClick={() => setSelectedChapter(ch)}
                     className={cn(
-                      'text-[12px] font-semibold rounded-md py-1.5 transition-all',
+                      'text-[12px] font-mono font-semibold rounded-btn py-1.5 transition-all',
                       selectedChapter === ch
-                        ? 'bg-brand-600 text-white shadow-brand'
-                        : 'bg-surface-soft dark:bg-dark-card text-slate-500 dark:text-slate-400 hover:bg-brand-50 hover:text-brand-600',
+                        ? 'bg-primary-500 text-white'
+                        : 'bg-surface-3 text-ink-3 hover:text-primary-500 hover:bg-primary-500/10',
                     )}
                   >{ch}</button>
                 ))}
@@ -516,18 +458,19 @@ export function ScripturePage() {
             </div>
 
             <div className="flex-1 overflow-hidden flex flex-col">
-              <SectionLabel className="mb-1.5">
+              <FieldLabel className="mb-1.5">
                 Versículos ({verses.length})
-                <span className="ml-1.5 text-slate-300 dark:text-slate-700 font-normal normal-case tracking-normal">
+                <span className="ml-1.5 text-ink-4 font-normal normal-case tracking-normal">
                   · doble clic proyecta
                 </span>
-              </SectionLabel>
+              </FieldLabel>
               <div className="flex-1 overflow-y-auto space-y-0.5 pr-0.5">
                 {verses.map(v => (
                   <VerseItem
                     key={v.id}
                     verse={v}
                     isSelected={selectedVerse?.id === v.id}
+                    isLiveVerse={liveVerseId === v.id}
                     onSelect={setSelectedVerse}
                     onProject={projectVerse}
                     onSave={saveVerse}
@@ -542,7 +485,7 @@ export function ScripturePage() {
         {mode === 'search' && (
           <div className="flex flex-col flex-1 overflow-hidden p-3 gap-2">
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-ink-4">
                 <SearchIcon />
               </span>
               <Input className="pl-8 text-[13px]" placeholder="Buscar en la Biblia…"
@@ -553,11 +496,11 @@ export function ScripturePage() {
               {searching ? (
                 <div className="flex justify-center py-6"><Spinner size={18} /></div>
               ) : query && searchResults.length === 0 ? (
-                <p className="text-center text-[12px] text-slate-400 py-6">Sin resultados para "{query}"</p>
+                <p className="text-center text-[12px] text-ink-4 py-6">Sin resultados para "{query}"</p>
               ) : (
                 <>
                   {searchTotal > 0 && (
-                    <p className="text-[11px] text-slate-400 dark:text-slate-600 pb-1">
+                    <p className="text-[11px] font-mono text-ink-4 pb-1">
                       {searchTotal.toLocaleString()} resultado{searchTotal !== 1 ? 's' : ''}
                       {searchTotal > 60 && ' (mostrando 60)'}
                     </p>
@@ -567,6 +510,7 @@ export function ScripturePage() {
                       key={v.id}
                       verse={v}
                       isSelected={selectedVerse?.id === v.id}
+                      isLiveVerse={liveVerseId === v.id}
                       onSelect={setSelectedVerse}
                       onProject={projectVerse}
                       onSave={saveVerse}
@@ -587,16 +531,16 @@ export function ScripturePage() {
         ) : selectedVerse ? (
           <>
             {/* Preview — ocupa el espacio disponible, nunca más de 55vh */}
-            <div className="flex-1 min-h-0 max-h-[55vh]">
-              <VersePreview verse={selectedVerse} activeBg={activeBg} />
+            <div className="flex-1 min-h-0 max-h-[55vh] flex justify-center">
+              <VersePreview verse={selectedVerse} activeBg={activeBg} showVerseNumbers={showVerseNumbers} />
             </div>
 
             {/* Referencia + texto */}
             <Card className="p-3 flex-shrink-0">
-              <p className="font-mono text-[11px] font-bold text-brand-500 mb-1">
+              <p className="font-mono text-[10px] font-bold uppercase tracking-[1px] text-primary-500 mb-1">
                 {selectedVerse.reference}
               </p>
-              <p className="text-[13px] text-slate-700 dark:text-slate-300 leading-relaxed line-clamp-2">
+              <p className="text-[13px] text-ink-2 leading-relaxed line-clamp-2">
                 {selectedVerse.text}
               </p>
             </Card>
@@ -605,66 +549,56 @@ export function ScripturePage() {
             <div className="flex gap-2 flex-shrink-0 items-center">
 
               {/* Anterior */}
-              <button
+              <Button
+                variant="outline"
+                size="md"
                 disabled={mode === 'navigate'
                   ? (!selectedVerse || selectedVerse.verse <= 1)
                   : searchResults.findIndex(v => v.id === selectedVerse?.id) <= 0}
                 onClick={mode === 'navigate' ? goPrev : goSearchPrev}
-                className={cn(
-                  'flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-semibold border transition-all flex-shrink-0',
-                  (mode === 'navigate'
-                    ? (!selectedVerse || selectedVerse.verse <= 1)
-                    : searchResults.findIndex(v => v.id === selectedVerse?.id) <= 0)
-                    ? 'border-surface-muted dark:border-dark-border text-slate-300 dark:text-slate-700 cursor-not-allowed'
-                    : 'border-surface-muted dark:border-dark-border text-slate-600 dark:text-slate-300 hover:border-brand-300 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-950/20',
-                )}
               >
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                   <path d="M15 18l-6-6 6-6"/>
                 </svg>
                 Anterior
-              </button>
+              </Button>
 
               {/* Proyectar */}
-              <button
+              <Button
+                variant="primary"
+                size="lg"
+                className="flex-1"
                 onClick={() => projectVerse(selectedVerse)}
-                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-bold text-white bg-brand-600 hover:bg-brand-700 transition-all shadow-brand hover:-translate-y-px active:translate-y-0"
               >
                 <ProjectIcon />
                 Proyectar
-              </button>
+              </Button>
 
               {/* Siguiente */}
-              <button
+              <Button
+                variant="outline"
+                size="md"
                 disabled={mode === 'navigate'
                   ? (!selectedVerse || selectedVerse.verse >= verses.length)
                   : searchResults.findIndex(v => v.id === selectedVerse?.id) >= searchResults.length - 1}
                 onClick={mode === 'navigate' ? goNext : goSearchNext}
-                className={cn(
-                  'flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-semibold border transition-all flex-shrink-0',
-                  (mode === 'navigate'
-                    ? (!selectedVerse || selectedVerse.verse >= verses.length)
-                    : searchResults.findIndex(v => v.id === selectedVerse?.id) >= searchResults.length - 1)
-                    ? 'border-surface-muted dark:border-dark-border text-slate-300 dark:text-slate-700 cursor-not-allowed'
-                    : 'border-surface-muted dark:border-dark-border text-slate-600 dark:text-slate-300 hover:border-brand-300 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-950/20',
-                )}
               >
                 Siguiente
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                   <path d="M9 18l6-6-6-6"/>
                 </svg>
-              </button>
+              </Button>
 
               {/* Guardar */}
               <button
                 onClick={() => saveVerse(selectedVerse)}
                 className={cn(
-                  'flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-semibold border transition-all flex-shrink-0',
+                  'flex items-center gap-1.5 px-3 py-2 rounded-btn text-[12px] font-semibold border transition-all flex-shrink-0',
                   saveMsg === 'ok'
-                    ? 'border-green-300 dark:border-green-800 text-green-600 bg-green-50 dark:bg-green-950/20'
+                    ? 'border-emerald-500/40 text-emerald-500 bg-emerald-500/10'
                     : saveMsg === 'error'
-                    ? 'border-red-300 text-red-500'
-                    : 'border-surface-muted dark:border-dark-border text-slate-500 dark:text-slate-400 hover:border-brand-300 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-950/20',
+                    ? 'border-live-500/40 text-live-500'
+                    : 'border-line-2 text-ink-3 hover:text-primary-500 hover:border-primary-500/40 hover:bg-primary-500/10',
                 )}
               >
                 <SaveIcon />
@@ -673,7 +607,7 @@ export function ScripturePage() {
             </div>
 
             {/* Hint */}
-            <p className="text-[10px] text-slate-300 dark:text-slate-700 text-center flex-shrink-0">
+            <p className="text-[10px] font-mono text-ink-4 text-center flex-shrink-0">
               {mode === 'navigate' && verses.length > 0 &&
                 `${selectedVerse.bookName} ${selectedVerse.chapter}:${selectedVerse.verse} / ${verses.length} · `}
               {mode === 'search' && searchResults.length > 0 &&
@@ -682,7 +616,7 @@ export function ScripturePage() {
             </p>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-slate-400 text-sm">
+          <div className="flex-1 flex items-center justify-center text-ink-4 text-sm">
             Selecciona un versículo para previsualizarlo
           </div>
         )}
@@ -692,42 +626,24 @@ export function ScripturePage() {
 }
 
 // ─── Preview 16:9 ────────────────────────────────────────────────────────────
-function VersePreview({ verse, activeBg }) {
-  const { projectionFontFamily, watermark } = useApp()
-  const effectiveBg = activeBg ?? DEFAULT_BG
-  const isMedia = effectiveBg.type === 'image' || effectiveBg.type === 'gif' || effectiveBg.type === 'video'
+// Espejo exacto de lo que projectVerse manda a proyección (mismo formato de texto)
+function VersePreview({ verse, activeBg, showVerseNumbers }) {
+  const { projectionFontFamily, projFontSize, watermark } = useApp()
+  const body = showVerseNumbers ? `${verse.verse}. ${verse.text}` : verse.text
   return (
-    <div className="slide-canvas w-full h-full">
-      {!isMedia && <div className="absolute inset-0 transition-all duration-500" style={{ background: effectiveBg.value }} />}
-      {(effectiveBg.type === 'image' || effectiveBg.type === 'gif') && (
-        <>
-          <img src={effectiveBg.thumbnail || effectiveBg.value} alt="" className="absolute inset-0 w-full h-full object-cover" />
-          <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.38)' }} />
-        </>
-      )}
-      {effectiveBg.type === 'video' && (
-        <>
-          <video key={effectiveBg.value} src={effectiveBg.value} loop muted autoPlay playsInline onCanPlay={e => e.target.play().catch(() => {})} className="absolute inset-0 w-full h-full object-cover" />
-          <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.4)' }} />
-        </>
-      )}
-      <span className="absolute top-2.5 left-3 font-mono text-[10px] text-white/20 tracking-wider select-none">PREVIEW</span>
-      <div className="absolute inset-0 flex flex-col items-center justify-center p-8 gap-3 overflow-hidden">
-        <p className="text-white font-bold text-center leading-snug whitespace-pre-wrap transition-all"
-          style={{ fontFamily: buildFontFamily(projectionFontFamily), fontSize: 'clamp(12px, 2.8vw, 28px)', textShadow: '0 2px 24px rgba(0,0,0,.8)',
-            maxWidth: '100%', overflowWrap: 'break-word' }}>
-          {verse.text}
-        </p>
-        <p className="text-white/50 font-bold text-center"
-          style={{ fontFamily: buildFontFamily(projectionFontFamily), fontSize: 'clamp(9px, 1.4vw, 14px)' }}>
-          {verse.reference}
-        </p>
-      </div>
-
+    <SlideCanvas
+      bg={activeBg}
+      text={`${body}\n\n— ${verse.reference}`}
+      fontFamily={projectionFontFamily}
+      fontSizeMode={projFontSize}
+      label="Preview"
+      video
+      className="h-full max-w-full"
+    >
       {watermark?.enabled && watermark.image && (
         <img src={watermark.image} alt="" className="absolute pointer-events-none select-none"
           style={watermarkPreviewStyle(watermark)} />
       )}
-    </div>
+    </SlideCanvas>
   )
 }
